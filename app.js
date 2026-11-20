@@ -14,8 +14,12 @@ const sport = (...s) => (l) => s.some((x) => (l.sport || "").includes(x));
 const e = (...f) => (l) => f.every((g) => g(l));
 const non = (f) => (l) => !f(l);
 
+const MARCA = "#0b4f6c";
+/* Ogni categoria: nome che dice cosa contiene, icona a linea, sottofiltri che guidano,
+   "info" = che cosa serve per decidere (lo pubblica l'attività), "prezzo" = si può ordinare dal più economico. */
 const CATEGORIE = [
-  { id: "mangiare", nome: "Mangiare", icona: "mangiare", colore: "#d4531e", azione: "tavolo",
+  { id: "mangiare", nome: "Mangiare e bere", icona: "mangiare", azione: "tavolo", prezzo: true,
+    info: { titolo: "Menù e prezzi", vuoto: "Il menù non è ancora pubblicato." },
     entra: t("amenity=restaurant", "amenity=cafe", "amenity=bar", "amenity=pub", "amenity=fast_food", "amenity=ice_cream", "shop=pastry"),
     sotto: [
       ["Pizzerie", cucina("pizza")],
@@ -26,87 +30,79 @@ const CATEGORIE = [
       ["Gelaterie e pasticcerie", t("amenity=ice_cream", "shop=pastry")],
       ["Pub", t("amenity=pub")],
     ] },
-  { id: "spesa", nome: "Spesa e negozi", icona: "spesa", colore: "#1a8a5a", azione: "ordine",
-    entra: e(t("shop=*"), non(t("shop=hairdresser", "shop=beauty", "shop=car_repair", "shop=car", "shop=tyres", "shop=funeral_directors", "shop=laundry", "shop=dry_cleaning", "shop=pastry"))),
+  { id: "spesa", nome: "Fare la spesa", icona: "spesa", azione: "ordine", prezzo: true,
+    info: { titolo: "Offerte e consegna", vuoto: "Offerte e consegna a casa non sono ancora pubblicate." },
+    entra: t("shop=supermarket", "shop=convenience", "shop=bakery", "shop=butcher", "shop=greengrocer", "shop=deli", "shop=dairy", "shop=seafood", "shop=cheese", "shop=frozen_food", "shop=farm", "shop=confectionery", "shop=coffee", "shop=pasta", "shop=wine", "shop=beverages", "shop=alcohol", "shop=tobacco", "shop=newsagent", "shop=kiosk", "shop=lottery"),
     sotto: [
-      ["Alimentari", t("shop=supermarket", "shop=convenience", "shop=bakery", "shop=butcher", "shop=greengrocer", "shop=deli", "shop=dairy", "shop=seafood", "shop=cheese", "shop=frozen_food", "shop=farm", "shop=confectionery", "shop=coffee", "shop=pasta")],
+      ["Supermercati e alimentari", t("shop=supermarket", "shop=convenience", "shop=deli", "shop=dairy", "shop=cheese", "shop=frozen_food", "shop=farm", "shop=pasta", "shop=coffee")],
+      ["Pane e dolci", t("shop=bakery", "shop=confectionery")],
+      ["Carne e pesce", t("shop=butcher", "shop=seafood")],
+      ["Frutta e verdura", t("shop=greengrocer")],
       ["Vini e bevande", t("shop=wine", "shop=beverages", "shop=alcohol")],
-      ["Cura della persona", t("shop=chemist", "shop=cosmetics", "shop=perfumery", "shop=optician", "shop=medical_supply", "shop=herbalist")],
-      ["Casa e fai da te", t("shop=hardware", "shop=doityourself", "shop=furniture", "shop=houseware", "shop=garden_centre", "shop=paint", "shop=interior_decoration", "shop=kitchen", "shop=bathroom_furnishing", "shop=building_materials", "shop=agrarian", "shop=trade")],
-      ["Elettronica e telefonia", t("shop=electronics", "shop=mobile_phone", "shop=computer", "shop=appliance")],
-      ["Abbigliamento", t("shop=clothes", "shop=shoes", "shop=jewelry", "shop=bag", "shop=boutique", "shop=fashion_accessories", "shop=sports")],
       ["Tabacchi ed edicole", t("shop=tobacco", "shop=newsagent", "shop=kiosk", "shop=lottery")],
-      ["Fiori, regali, libri", t("shop=florist", "shop=gift", "shop=books", "shop=stationery", "shop=toys", "shop=pet")],
     ] },
-  { id: "sport", nome: "Sport", icona: "sport", colore: "#2563c9", azione: "campo",
+  { id: "negozi", nome: "Negozi", icona: "negozio", azione: "chiama",
+    info: { titolo: "Offerte in corso", vuoto: "Nessuna offerta pubblicata." },
+    entra: e(t("shop=*"), non(t("shop=hairdresser", "shop=beauty", "shop=nails", "shop=car_repair", "shop=car", "shop=tyres", "shop=car_parts", "shop=motorcycle", "shop=funeral_directors", "shop=laundry", "shop=dry_cleaning", "shop=pastry", "shop=supermarket", "shop=convenience", "shop=bakery", "shop=butcher", "shop=greengrocer", "shop=deli", "shop=dairy", "shop=seafood", "shop=cheese", "shop=frozen_food", "shop=farm", "shop=confectionery", "shop=coffee", "shop=pasta", "shop=wine", "shop=beverages", "shop=alcohol", "shop=tobacco", "shop=newsagent", "shop=kiosk", "shop=lottery"))),
+    sotto: [
+      ["Abbigliamento e scarpe", t("shop=clothes", "shop=shoes", "shop=jewelry", "shop=bag", "shop=boutique", "shop=fashion_accessories", "shop=sports")],
+      ["Casa e fai da te", t("shop=hardware", "shop=doityourself", "shop=furniture", "shop=houseware", "shop=garden_centre", "shop=paint", "shop=interior_decoration", "shop=kitchen", "shop=bathroom_furnishing", "shop=building_materials", "shop=agrarian", "shop=trade", "shop=mall")],
+      ["Elettronica e telefonia", t("shop=electronics", "shop=mobile_phone", "shop=computer", "shop=appliance", "shop=photo")],
+      ["Cura della persona", t("shop=chemist", "shop=cosmetics", "shop=perfumery", "shop=optician", "shop=medical_supply", "shop=herbalist", "shop=hairdresser_supply")],
+      ["Fiori, regali e libri", t("shop=florist", "shop=gift", "shop=books", "shop=stationery", "shop=toys", "shop=pet", "shop=bicycle")],
+    ] },
+  { id: "cura", nome: "Barbiere e bellezza", icona: "cura", azione: "appuntamento", prezzo: true,
+    info: { titolo: "Listino", vuoto: "Il listino non è ancora pubblicato." },
+    entra: t("shop=hairdresser", "shop=beauty", "shop=nails", "amenity=spa"),
+    sotto: [["Barbiere e parrucchiere", t("shop=hairdresser")], ["Estetica e unghie", t("shop=beauty", "shop=nails", "amenity=spa")]] },
+  { id: "sport", nome: "Sport", icona: "sport", azione: "campo", prezzo: true,
+    info: { titolo: "Prezzi dei campi", vuoto: "I prezzi non sono ancora pubblicati." },
     entra: t("leisure=pitch", "leisure=sports_centre", "leisure=stadium", "leisure=swimming_pool", "leisure=fitness_centre"),
     sotto: [
-      ["Calcio e calcetto", sport("soccer")],
-      ["Tennis e padel", sport("tennis", "padel")],
-      ["Palestre", t("leisure=fitness_centre")],
-      ["Piscine", t("leisure=swimming_pool")],
-      ["Basket e volley", sport("basketball", "volleyball")],
-      ["Centri sportivi", t("leisure=sports_centre", "leisure=stadium")],
+      ["Calcio e calcetto", sport("soccer")], ["Tennis e padel", sport("tennis", "padel")], ["Palestre", t("leisure=fitness_centre")],
+      ["Piscine", t("leisure=swimming_pool")], ["Basket e volley", sport("basketball", "volleyball")], ["Centri sportivi", t("leisure=sports_centre", "leisure=stadium")],
     ] },
-  { id: "salute", nome: "Salute", icona: "salute", colore: "#c4314b", azione: "chiama",
+  { id: "salute", nome: "Salute", icona: "salute", azione: "chiama",
+    info: { titolo: "Orari e turni", vuoto: "Turni di guardia non ancora pubblicati." },
     entra: t("amenity=pharmacy", "amenity=doctors", "amenity=dentist", "amenity=clinic", "amenity=hospital", "amenity=veterinary", "healthcare=*"),
     sotto: [
       ["Farmacie", t("amenity=pharmacy", "healthcare=pharmacy")],
       ["Medici e ambulatori", t("amenity=doctors", "amenity=clinic", "healthcare=doctor", "healthcare=clinic", "healthcare=centre", "healthcare=laboratory", "healthcare=physiotherapist")],
-      ["Dentisti", t("amenity=dentist", "healthcare=dentist")],
-      ["Ospedali", t("amenity=hospital", "healthcare=hospital")],
-      ["Veterinari", t("amenity=veterinary")],
+      ["Dentisti", t("amenity=dentist", "healthcare=dentist")], ["Ospedali", t("amenity=hospital", "healthcare=hospital")], ["Veterinari", t("amenity=veterinary")],
     ] },
-  { id: "cura", nome: "Barbiere e servizi", icona: "cura", colore: "#7a4cc2", azione: "appuntamento",
-    entra: t("shop=hairdresser", "shop=beauty", "shop=car_repair", "shop=tyres", "shop=car", "amenity=car_wash", "shop=laundry", "shop=dry_cleaning", "craft=*"),
+  { id: "auto", nome: "Auto e artigiani", icona: "auto", azione: "appuntamento", prezzo: true,
+    info: { titolo: "Listino", vuoto: "Il listino non è ancora pubblicato." },
+    entra: t("shop=car_repair", "shop=tyres", "shop=car", "shop=car_parts", "shop=motorcycle", "amenity=car_wash", "amenity=fuel", "craft=*", "shop=laundry", "shop=dry_cleaning"),
     sotto: [
-      ["Barbiere e parrucchiere", t("shop=hairdresser")],
-      ["Estetica", t("shop=beauty")],
-      ["Auto e moto", t("shop=car_repair", "shop=tyres", "shop=car", "amenity=car_wash")],
-      ["Lavanderie", t("shop=laundry", "shop=dry_cleaning")],
-      ["Artigiani", t("craft=*")],
+      ["Officine e gommisti", t("shop=car_repair", "shop=tyres", "shop=car", "shop=car_parts", "shop=motorcycle")], ["Distributori", t("amenity=fuel")],
+      ["Autolavaggi", t("amenity=car_wash")], ["Lavanderie", t("shop=laundry", "shop=dry_cleaning")], ["Artigiani", t("craft=*")],
     ] },
-  { id: "servizi", nome: "Comune e uffici", icona: "servizi", colore: "#3d4f60", azione: "chiama",
-    entra: t("amenity=townhall", "amenity=post_office", "amenity=bank", "amenity=police", "amenity=fire_station", "amenity=school", "amenity=kindergarten", "amenity=college", "amenity=university", "amenity=library", "amenity=fuel", "office=*", "amenity=social_facility", "amenity=community_centre", "shop=funeral_directors"),
+  { id: "servizi", nome: "Uffici e servizi", icona: "servizi", azione: "chiama",
+    info: { titolo: "Apertura al pubblico", vuoto: "Gli orari per il pubblico non sono ancora pubblicati." },
+    entra: t("amenity=townhall", "amenity=post_office", "amenity=bank", "amenity=police", "amenity=fire_station", "amenity=school", "amenity=kindergarten", "amenity=college", "amenity=university", "amenity=library", "office=*", "amenity=social_facility", "amenity=community_centre", "amenity=courthouse", "shop=funeral_directors"),
     sotto: [
-      ["Municipi e uffici pubblici", t("amenity=townhall", "office=government", "office=administrative")],
-      ["Poste e banche", t("amenity=post_office", "amenity=bank")],
-      ["Sicurezza", t("amenity=police", "amenity=fire_station")],
-      ["Scuole e biblioteche", t("amenity=school", "amenity=kindergarten", "amenity=college", "amenity=university", "amenity=library")],
-      ["Carburante", t("amenity=fuel")],
-      ["Sociale e comunità", t("amenity=social_facility", "amenity=community_centre")],
-      ["Studi e professionisti", e(t("office=*"), non(t("office=government", "office=administrative")))],
+      ["Municipi e uffici pubblici", t("amenity=townhall", "office=government", "office=administrative", "amenity=courthouse")], ["Poste e banche", t("amenity=post_office", "amenity=bank")],
+      ["Sicurezza", t("amenity=police", "amenity=fire_station")], ["Scuole e biblioteche", t("amenity=school", "amenity=kindergarten", "amenity=college", "amenity=university", "amenity=library")],
+      ["Sociale e comunità", t("amenity=social_facility", "amenity=community_centre")], ["Studi e professionisti", e(t("office=*"), non(t("office=government", "office=administrative")))],
     ] },
-  { id: "cultura", nome: "Cultura", icona: "cultura", colore: "#a5641a", azione: "visita",
+  { id: "cultura", nome: "Cultura e luoghi da vedere", icona: "cultura", azione: "visita",
     entra: t("historic=*", "tourism=museum", "tourism=attraction", "tourism=artwork", "amenity=place_of_worship", "amenity=monastery", "amenity=theatre", "amenity=cinema", "amenity=arts_centre"),
     sotto: [
-      ["Chiese e conventi", t("amenity=place_of_worship", "amenity=monastery", "historic=church", "historic=monastery", "historic=wayside_shrine", "historic=wayside_cross")],
-      ["Musei", t("tourism=museum")],
-      ["Castelli e mura", t("historic=castle", "historic=city_gate", "historic=citywalls", "historic=tower", "historic=fort")],
-      ["Archeologia", t("historic=archaeological_site", "historic=ruins")],
-      ["Monumenti e arte", t("historic=monument", "historic=memorial", "tourism=artwork", "tourism=attraction", "historic=building")],
-      ["Teatri e cinema", t("amenity=theatre", "amenity=cinema", "amenity=arts_centre")],
+      ["Chiese e conventi", t("amenity=place_of_worship", "amenity=monastery", "historic=church", "historic=monastery", "historic=wayside_shrine", "historic=wayside_cross")], ["Musei", t("tourism=museum")],
+      ["Castelli e mura", t("historic=castle", "historic=city_gate", "historic=citywalls", "historic=tower", "historic=fort")], ["Archeologia", t("historic=archaeological_site", "historic=ruins")],
+      ["Monumenti e arte", t("historic=monument", "historic=memorial", "tourism=artwork", "tourism=attraction", "historic=building")], ["Teatri e cinema", t("amenity=theatre", "amenity=cinema", "amenity=arts_centre")],
     ] },
-  { id: "natura", nome: "Natura e svago", icona: "natura", colore: "#4f8a1e", azione: "vai",
+  { id: "natura", nome: "Natura e svago", icona: "natura", azione: "vai",
     entra: t("leisure=park", "leisure=playground", "leisure=nature_reserve", "tourism=viewpoint", "tourism=picnic_site", "natural=*"),
-    sotto: [
-      ["Parchi e giochi", t("leisure=park", "leisure=playground")],
-      ["Panorami", t("tourism=viewpoint", "natural=peak")],
-      ["Grotte e sorgenti", t("natural=cave_entrance", "natural=spring")],
-      ["Picnic e riserve", t("tourism=picnic_site", "leisure=nature_reserve")],
-    ] },
-  { id: "dormire", nome: "Dormire", icona: "dormire", colore: "#0f7b8a", azione: "camera",
+    sotto: [["Parchi e giochi", t("leisure=park", "leisure=playground")], ["Panorami", t("tourism=viewpoint", "natural=peak")], ["Grotte e sorgenti", t("natural=cave_entrance", "natural=spring")], ["Picnic e riserve", t("tourism=picnic_site", "leisure=nature_reserve")]] },
+  { id: "dormire", nome: "Dormire", icona: "dormire", azione: "camera", prezzo: true,
+    info: { titolo: "Prezzi a notte", vuoto: "I prezzi non sono ancora pubblicati." },
     entra: t("tourism=hotel", "tourism=guest_house", "tourism=apartment", "tourism=hostel", "tourism=camp_site", "tourism=chalet"),
-    sotto: [
-      ["Hotel", t("tourism=hotel")],
-      ["B&B e affittacamere", t("tourism=guest_house")],
-      ["Case vacanza", t("tourism=apartment", "tourism=chalet")],
-      ["Ostelli e campeggi", t("tourism=hostel", "tourism=camp_site")],
-    ] },
-  { id: "muoversi", nome: "Bus e treni", icona: "muoversi", colore: "#0b4f6c", azione: "bus",
+    sotto: [["Hotel", t("tourism=hotel")], ["B&B e affittacamere", t("tourism=guest_house")], ["Case vacanza", t("tourism=apartment", "tourism=chalet")], ["Ostelli e campeggi", t("tourism=hostel", "tourism=camp_site")]] },
+  { id: "muoversi", nome: "Muoversi", icona: "muoversi", azione: "bus",
     entra: t("highway=bus_stop", "amenity=bus_station", "railway=station"),
     sotto: [["Fermate", t("highway=bus_stop")], ["Autostazioni", t("amenity=bus_station")], ["Stazioni", t("railway=station")]] },
-];
+].map((c) => ({ ...c, colore: MARCA }));
 
 const NOMI = {
   "amenity=restaurant": "Ristorante", "amenity=cafe": "Caffè", "amenity=bar": "Bar", "amenity=pub": "Pub", "amenity=fast_food": "Rosticceria",
@@ -136,7 +132,7 @@ const MEM = "guardati-attorno:v3:";
 const leggi = (k, d) => { try { const v = JSON.parse(localStorage.getItem(MEM + k)); return v ?? d; } catch { return d; } };
 const scrivi = (k, v) => localStorage.setItem(MEM + k, JSON.stringify(v));
 
-const S = { cat: null, sotto: null, testo: "", comune: null, scelto: null, vista: "mappa", altezza: "basso", qui: null };
+const S = { ordine: "vicino", cat: null, sotto: null, testo: "", comune: null, scelto: null, vista: "mappa", altezza: "basso", qui: null };
 let mappa, strato, segnaposti = new Map(), segnoIo, TUTTI = [];
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -178,6 +174,13 @@ function centro() {
 }
 const distanza = (l) => { const d = km(centro(), l); return d < 1 ? `${Math.round(d * 100) * 10} m` : `${d.toFixed(1).replace(".", ",")} km`; };
 
+/* Schede compilate dalle attività che le hanno riscattate: listino, consegna, ecc. */
+const schedaDi = (osm) => leggi("schede", {})[osm] || null;
+function prezzoMin(l) {
+  const v = (schedaDi(l.osm)?.listino || []).map((x) => x.prezzo).filter((x) => x > 0);
+  return v.length ? Math.min(...v) : null;
+}
+const euro = (n) => "€ " + n.toFixed(2).replace(".", ",").replace(",00", "");
 function filtrati() {
   const q = S.testo.trim().toLowerCase();
   const cat = CATEGORIE.find((c) => c.id === S.cat);
@@ -187,7 +190,10 @@ function filtrati() {
     .filter((l) => !cat || l.cat === cat)
     .filter((l) => !sotto || sotto(l))
     .filter((l) => !q || [nomeDi(l), tipoDi(l), l.cat.nome, comuneDi(l.comune)?.nome, l.cucina, l.sport].join(" ").toLowerCase().includes(q))
-    .sort((a, b) => km(centro(), a) - km(centro(), b));
+    .sort((a, b) => {
+      if (S.ordine === "prezzo") { const pa = prezzoMin(a), pb = prezzoMin(b); if (pa != null || pb != null) return (pa ?? 1e9) - (pb ?? 1e9); }
+      return km(centro(), a) - km(centro(), b);
+    });
 }
 
 /* ================= Punti e livelli ================= */
@@ -239,15 +245,19 @@ function elenco() {
   const titolo = S.testo ? `Risultati per «${esc(S.testo)}»` : cat ? (S.sotto != null ? cat.sotto[S.sotto][0] : cat.nome) : `Cosa c'è nel ${esc(dove).replace(/^nel (Vallo)/, "$1")}`;
   corpo(`
     <h2 class="titolo-foglio">${S.comune && !cat && !S.testo ? `Cosa c'è a ${esc(dove)}` : titolo}</h2>
-    <p class="nota-tenue">${lista.length} ${lista.length === 1 ? "posto" : "posti"}${S.comune ? "" : " in " + T.comuni.length + " comuni"} · dal più vicino ${S.qui ? "a te" : "al centro"}</p>
+    <p class="nota-tenue">${lista.length} ${lista.length === 1 ? "posto" : "posti"}${S.comune ? "" : " in " + T.comuni.length + " comuni"}</p>
+    ${!cat && !S.testo ? scorciatoie() : ""}
+    ${cat?.prezzo || S.testo ? `<div class="scelte" role="group" aria-label="Ordina">${[["vicino", "Più vicini"], ["prezzo", "Più economici"]].map(([k, n]) => `<button class="scelta" data-ordine="${k}" aria-pressed="${S.ordine === k}">${n}</button>`).join("")}</div>` : ""}
     ${lista.length ? lista.slice(0, 80).map(riga).join("") : vuotoCategoria(cat)}`);
+  $$("[data-ordine]", $("#corpo")).forEach((b) => b.addEventListener("click", () => { S.ordine = b.dataset.ordine; disegnaPin(); elenco(); }));
+  $$("[data-scorcia]", $("#corpo")).forEach((b) => b.addEventListener("click", () => SCORCIATOIE[b.dataset.scorcia].fai()));
   $$("[data-osm]", $("#corpo")).forEach((b) => b.addEventListener("click", () => apriLuogo(b.dataset.osm, true)));
 }
 function riga(l) {
   return `<button class="riga" data-osm="${esc(l.osm)}">
       ${l.foto ? `<img class="miniatura" src="${esc(l.foto)}" alt="" loading="lazy">` : `<span class="segno" style="background:${l.cat.colore}14;color:${l.cat.colore}">${icona(l.cat.icona)}</span>`}
       <span><strong>${esc(nomeDi(l))}</strong><small>${esc(tipoDi(l))} · ${esc(comuneDi(l.comune)?.nome || "")}</small></span>
-      <span class="dist">${distanza(l)}</span></button>`;
+      <span class="dist">${distanza(l)}${prezzoMin(l) != null ? `<br><b style="color:var(--inchiostro)">da ${euro(prezzoMin(l))}</b>` : ""}</span></button>`;
 }
 function vuotoCategoria(cat) {
   return `<div class="riquadro"><h3>Qui non c'è ancora nessuno</h3>
@@ -298,16 +308,27 @@ async function apriLuogo(osm, centra = false) {
       <a class="btn verticale" href="${vai}" target="_blank" rel="noopener">${icona("vai")}Portami lì</a>
       ${tel ? `<a class="btn verticale" href="${tel}">${icona("telefono")}Chiama</a>` : l.cat.azione === "visita" ? "" : `<button class="btn verticale" data-fai="visita">${icona("percorso")}Itinerario</button>`}
     </div>
+    ${infoUtili(l)}
     <div id="sapere"></div>
     ${l.cat.id !== "cultura" && l.cat.id !== "natura" && l.cat.id !== "muoversi" && !rivendicata ? `
-      <div class="riquadro"><h3>È la tua attività?</h3><p>Rivendicala: aggiorni orari e foto, ricevi prenotazioni e pubblichi offerte in Bacheca.</p>
-        <div class="azioni" style="grid-template-columns:1fr"><button class="btn" data-fai="rivendica">${icona("nfc")} Rivendica con il tag o con un codice</button></div></div>` : ""}
+      <div class="riquadro"><h3>È la tua attività?</h3><p>Riscattala gratis: pubblichi menù, listino e orari, ricevi prenotazioni e offerte in Bacheca.</p>
+        <div class="azioni" style="grid-template-columns:1fr"><button class="btn" data-fai="rivendica">${icona("nfc")} Riscatta gratis la scheda</button></div></div>` : ""}
     <p class="fonte">Dati: <a href="https://www.openstreetmap.org/${esc(l.osm)}" target="_blank" rel="noopener">OpenStreetMap</a>${l.foto ? ' · foto: <a href="' + esc(l.foto_fonte || l.foto.replace("Special:FilePath/", "File:").replace(/\?width=\d+$/, "")) + '" target="_blank" rel="noopener">' + (l.foto_fonte ? "Wikipedia" : "Wikimedia Commons") + '</a>' : ""}</p>`);
   $("#chiudi").addEventListener("click", () => { elenco(); disegnaPin(); altezza("basso"); });
   $$("[data-fai]", $("#corpo")).forEach((b) => b.addEventListener("click", () => fai(b.dataset.fai, l)));
   if (S.altezza === "basso") altezza("medio");
   if (l.cat.id === "cultura" || l.cat.id === "natura") sapereDi(l);
   if (l.cat.id === "muoversi") busDi(l);
+}
+
+function infoUtili(l) {
+  const i = l.cat.info; if (!i) return "";
+  const sc = schedaDi(l.osm);
+  if (!sc?.listino?.length && !sc?.extra) return `<div class="riquadro"><h3>${esc(i.titolo)}</h3><p class="nota-tenue" style="margin:4px 0 0">${esc(i.vuoto)} L'attività può pubblicarlo gratis riscattando la scheda.</p></div>`;
+  return `<div class="riquadro"><h3>${esc(i.titolo)}</h3>
+    ${(sc.listino || []).map((x) => `<div class="voce" style="padding:8px 0"><div><strong style="font-weight:500">${esc(x.voce)}</strong></div><b>${euro(x.prezzo)}</b></div>`).join("")}
+    ${sc.extra ? `<p style="margin-top:8px">${esc(sc.extra)}</p>` : ""}
+    <p class="fonte">Pubblicato dall'attività</p></div>`;
 }
 
 /* ---- Cultura: la voce verificata, come una piccola enciclopedia del territorio ---- */
@@ -426,7 +447,7 @@ function modulo(l, titolo, html, conferma, dopo) {
 /* ---- Esercenti: rivendicare la scheda ---- */
 function rivendica(l) {
   corpo(`
-    <div class="testa"><div><span class="etich">Per gli esercenti</span><h2 style="margin-top:6px">Rivendica ${esc(nomeDi(l))}</h2></div>
+    <div class="testa"><div><span class="etich">Per gli esercenti</span><h2 style="margin-top:6px">Riscatta ${esc(nomeDi(l))}</h2></div>
       <button class="chiudi" id="chiudi" aria-label="Annulla">${icona("chiudi")}</button></div>
     <div class="riquadro"><h3>${icona("nfc")} Con il tag Guardati attorno</h3>
       <p>Ogni attività riceve un piccolo tag da mettere in vetrina. Avvicini il telefono e la scheda è tua. Lo stesso tag fa entrare i clienti nella tua pagina.</p>
@@ -438,7 +459,7 @@ function rivendica(l) {
   altezza("alto");
   const fatto = () => {
     const r = leggi("rivendicate", []); if (!r.includes(l.osm)) r.push(l.osm); scrivi("rivendicate", r);
-    guadagna(50, "Attività rivendicata"); gestisci(l);
+    guadagna(50, "Scheda riscattata"); gestisci(l);
   };
   $("#chiudi").addEventListener("click", () => apriLuogo(l.osm));
   $("#leggi-tag").addEventListener("click", async () => {
@@ -451,18 +472,59 @@ function gestisci(l) {
   corpo(`
     <div class="testa"><div><span class="etich ok">${icona("spunta")} La scheda è tua</span><h2 style="margin-top:6px">${esc(nomeDi(l))}</h2></div>
       <button class="chiudi" id="chiudi" aria-label="Chiudi">${icona("chiudi")}</button></div>
+    ${l.cat.info ? `<p class="domanda">${esc(l.cat.info.titolo)}</p>
+    <div id="listino">${(schedaDi(l.osm)?.listino?.length ? schedaDi(l.osm).listino : [{ voce: "", prezzo: "" }]).map(rigaListino).join("")}</div>
+    <button class="btn piccolo" id="agg-voce" style="margin-top:8px">${icona("piu")} Aggiungi una voce</button>
+    <label class="campo">Altro da sapere<input id="extra" value="${esc(schedaDi(l.osm)?.extra || "")}" placeholder="Es. consegna a domicilio, asporto, parcheggio"></label>
+    <div class="azioni" style="grid-template-columns:1fr"><button class="btn primario" id="salva-scheda">Salva la scheda</button></div>` : ""}
     <p class="domanda">Pubblica in Bacheca</p>
     <label class="campo">Titolo<input id="b-titolo" placeholder="Es. Menu del giorno, offerta, chiusura per ferie"></label>
     <label class="campo">Testo<textarea id="b-testo" rows="3"></textarea></label>
     <div class="azioni" style="grid-template-columns:1fr"><button class="btn accento pieno" id="pubblica">Pubblica</button></div>
-    <div class="riquadro"><h3>Profilo Google</h3><p>Con i dati della scheda creiamo o sistemiamo il tuo profilo dell'attività su Google, come servizio per il territorio.</p></div>
+    <p class="sezione-t">Servizi per la tua attività</p>
+    <div class="gruppo">${SERVIZI_EXTRA.map(([ic, ti, tx]) => `<div class="voce">${icona(ic)}<div><strong>${ti}</strong><small>${tx}</small></div><button class="btn piccolo" data-richiedi="${esc(ti)}">Richiedi</button></div>`).join("")}</div>
     ${DEMO}`);
   $("#chiudi").addEventListener("click", () => apriLuogo(l.osm));
+  $$("[data-richiedi]", $("#corpo")).forEach((b) => b.addEventListener("click", () => { b.textContent = "Richiesto"; b.disabled = true; avvisa("Richiesta inviata: ti ricontattiamo"); }));
+  if ($("#agg-voce")) {
+    $("#agg-voce").addEventListener("click", () => $("#listino").insertAdjacentHTML("beforeend", rigaListino({ voce: "", prezzo: "" })));
+    $("#salva-scheda").addEventListener("click", () => {
+      const listino = $$("#listino .riga-listino").map((r) => ({ voce: $("input", r).value.trim(), prezzo: parseFloat(String($("input[type=number]", r).value).replace(",", ".")) }))
+        .filter((x) => x.voce && x.prezzo > 0);
+      const tutte = leggi("schede", {}); tutte[l.osm] = { listino, extra: $("#extra").value.trim() }; scrivi("schede", tutte);
+      guadagna(10, "Scheda aggiornata"); apriLuogo(l.osm);
+    });
+  }
   $("#pubblica").addEventListener("click", () => {
     const ti = $("#b-titolo").value.trim(), tx = $("#b-testo").value.trim(); if (!ti) return avvisa("Scrivi un titolo");
     const mie = leggi("bacheca-mie", []); mie.unshift({ id: "mia-" + Date.now(), tipo: "attivita", da: nomeDi(l), comune: l.comune, quando: "Adesso", titolo: ti, testo: tx, mia: true });
     scrivi("bacheca-mie", mie); guadagna(5, "Pubblicato in Bacheca"); apriLuogo(l.osm);
   });
+}
+
+const rigaListino = (x) => `<div class="riga-listino" style="display:grid;grid-template-columns:1fr 6rem;gap:8px;margin-top:8px">
+  <input class="campo-in" placeholder="Es. Pizza margherita" value="${esc(x.voce)}">
+  <input class="campo-in" type="number" step="0.5" min="0" placeholder="€" value="${x.prezzo || ""}"></div>`;
+const SERVIZI_EXTRA = [
+  ["nfc", "Tag NFC in vetrina", "Il cliente avvicina il telefono e arriva alla tua scheda"],
+  ["sito", "Profili su Google e social", "Li creiamo e li teniamo aggiornati con i dati della scheda"],
+  ["stella", "Strumenti con l'intelligenza artificiale", "Risposte ai clienti, menù tradotti, preventivi"],
+];
+
+/* ================= Scorciatoie fissate dall'utente ================= */
+const SCORCIATOIE = {
+  soliti: { nome: "I miei soliti", icona: "cuore", fai: () => pannelloPrenota() },
+  bus: { nome: "Bus da casa", icona: "muoversi", fai: () => vai("bus") },
+  itinerario: { nome: "Il mio itinerario", icona: "percorso", fai: () => vai("itinerari") },
+  farmacie: { nome: "Farmacie", icona: "salute", fai: () => { azzera(); S.cat = "salute"; S.sotto = 0; aggiorna(); altezza("medio"); } },
+  bacheca: { nome: "Bacheca", icona: "bacheca", fai: () => vai("bacheca") },
+  mangiare: { nome: "Dove mangiare", icona: "mangiare", fai: () => { azzera(); S.cat = "mangiare"; aggiorna(); altezza("medio"); } },
+  grande: { nome: "Testo grande", icona: "testo", fai: () => { const g = !document.documentElement.classList.contains("grande"); document.documentElement.classList.toggle("grande", g); scrivi("grande", g); } },
+};
+const scorciatoieScelte = () => leggi("scorciatoie", ["soliti", "bus", "farmacie"]);
+function scorciatoie() {
+  const sc = scorciatoieScelte(); if (!sc.length) return "";
+  return `<div class="scelte" style="margin-bottom:6px">${sc.map((k) => SCORCIATOIE[k] ? `<button class="chip" data-scorcia="${k}">${icona(SCORCIATOIE[k].icona)}${SCORCIATOIE[k].nome}</button>` : "").join("")}</div>`;
 }
 
 /* ================= Prenota: i tuoi soliti e i servizi vicini ================= */
@@ -495,7 +557,9 @@ const fmtData = (iso) => new Intl.DateTimeFormat("it-IT", { weekday: "long", day
 function paginaAgenda() {
   const v = leggi("agenda", []), u = utente();
   const promemoria = u?.promemoria || "calendario";
-  pagina(`<h1>Agenda</h1><p class="nota-tenue">Le tue prenotazioni e i tuoi ordini. ${promemoria === "sveglia" ? "Ti avvisiamo con una sveglia il giorno prima e un'ora prima." : "Puoi metterle nel calendario del telefono."}</p>
+  pagina(`<h1>Agenda</h1>
+    <div class="azioni" style="grid-template-columns:1fr;margin:8px 0 6px"><button class="btn accento pieno" id="agenda-prenota">${icona("calendario")} Prenota</button></div>
+    <p class="nota-tenue">Le tue prenotazioni e i tuoi ordini. ${promemoria === "sveglia" ? "Ti avvisiamo con una sveglia il giorno prima e un'ora prima." : "Puoi metterle nel calendario del telefono."}</p>
     ${v.length ? v.map((x) => `<div class="carta">
         <span class="etich">${esc(x.tipo)}</span>
         <h3>${esc(x.nome)}</h3><p>${esc(fmtData(x.quando))}${x.dettaglio ? " · " + esc(x.dettaglio) : ""}</p>
@@ -503,8 +567,9 @@ function paginaAgenda() {
           ${promemoria === "sveglia" ? `<button class="btn piccolo ${x.sveglia ? "attivo" : ""}" data-sveglia="${x.n}">${icona("sveglia")} ${x.sveglia ? "Sveglia messa" : "Metti la sveglia"}</button>`
             : `<button class="btn piccolo" data-ics="${x.n}">${icona("calendario")} Nel calendario</button>`}
           <button class="btn piccolo" data-annulla="${x.n}">Annulla</button></div></div>`).join("")
-      : `<div class="vuoto">${icona("calendario")}<p>Niente in programma.<br>Tocca «Prenota» sulla mappa per cominciare.</p></div>`}
+      : `<div class="vuoto">${icona("calendario")}<p>Niente in programma.<br>Tocca «Prenota» qui sopra per cominciare.</p></div>`}
     <p class="fonte">Promemoria scelto alla registrazione: ${promemoria === "sveglia" ? "sveglia" : "calendario"}. Si cambia dal Profilo.</p>`);
+  $("#agenda-prenota").addEventListener("click", () => { vai("mappa"); pannelloPrenota(); });
   $$("[data-annulla]").forEach((b) => b.addEventListener("click", () => { scrivi("agenda", leggi("agenda", []).filter((x) => x.n !== +b.dataset.annulla)); contaAgenda(); paginaAgenda(); }));
   $$("[data-ics]").forEach((b) => b.addEventListener("click", () => scaricaIcs(leggi("agenda", []).find((x) => x.n === +b.dataset.ics))));
   $$("[data-sveglia]").forEach((b) => b.addEventListener("click", async () => {
@@ -598,6 +663,10 @@ function paginaProfilo() {
       <div class="voce">${icona("muoversi")}<div><strong>Orari dei bus</strong><small>Lamanna e Curcio, in evidenza le tue fermate</small></div><button class="chiudi" data-apri="bus" aria-label="Apri">${icona("freccia")}</button></div>
     </div>
 
+    <p class="sezione-t">Le mie scorciatoie</p>
+    <p class="nota-tenue" style="margin-top:-4px">Scegli fino a 4 funzioni da tenere in cima alla mappa.</p>
+    <div class="gruppo">${Object.entries(SCORCIATOIE).map(([k, x]) => `<label class="voce">${icona(x.icona)}<div><strong>${x.nome}</strong></div><input type="checkbox" data-pin="${k}" ${scorciatoieScelte().includes(k) ? "checked" : ""}></label>`).join("")}</div>
+
     <p class="sezione-t">Come la uso</p>
     <div class="gruppo">
       <div class="voce">${icona("testo")}<div><strong>Testo grande</strong><small>Lettere e pulsanti più grandi</small></div><input type="checkbox" id="grande" ${document.documentElement.classList.contains("grande") ? "checked" : ""}></div>
@@ -613,12 +682,17 @@ function paginaProfilo() {
 
     <p class="sezione-t">Hai un'attività?</p>
     <div class="gruppo">
-      <div class="voce">${icona("nfc")}<div><strong>Rivendica la tua scheda</strong><small>Cerca la tua attività sulla mappa e tocca «È la tua attività?»${riv ? ` · ne gestisci ${riv}` : ""}</small></div></div>
+      <div class="voce">${icona("nfc")}<div><strong>Riscatta gratis la tua scheda</strong><small>Cerca la tua attività sulla mappa e tocca «È la tua attività?»${riv ? ` · ne gestisci ${riv}` : ""}</small></div></div>
       <div class="voce">${icona("attivita")}<div><strong>Non sei sulla mappa?</strong><small>Registrati gratis: con i tuoi dati creiamo anche il profilo Google dell'attività</small></div><button class="chiudi" data-apri="registra" aria-label="Registra">${icona("freccia")}</button></div>
     </div>
 
     <div class="azioni" style="grid-template-columns:1fr;margin-top:22px"><button class="btn" id="esci">${icona("uscita")} Ricomincia da capo</button></div>
     <p class="fonte">I tuoi dati restano su questo telefono. Mappa e luoghi © OpenStreetMap, scaricati il ${esc(T.scaricati)}. Punti, crediti e donazioni sono una dimostrazione.</p>`);
+  $$("[data-pin]").forEach((c) => c.addEventListener("change", () => {
+    const scelte = $$("[data-pin]").filter((x) => x.checked).map((x) => x.dataset.pin);
+    if (scelte.length > 4) { c.checked = false; return avvisa("Al massimo 4 scorciatoie"); }
+    scrivi("scorciatoie", scelte); elenco();
+  }));
   $("#grande").addEventListener("change", (ev) => { document.documentElement.classList.toggle("grande", ev.target.checked); scrivi("grande", ev.target.checked); setTimeout(() => mappa.invalidateSize(), 50); });
   $("#promemoria").addEventListener("change", (ev) => { scrivi("utente", { ...utente(), promemoria: ev.target.value }); paginaProfilo(); });
   $("#arrotonda").addEventListener("change", (ev) => { scrivi("arrotonda", ev.target.checked); avvisa(ev.target.checked ? "Grazie: ogni ordine aiuta il paese" : "Arrotondamento spento"); });
@@ -654,7 +728,7 @@ function paginaRegistra() {
   $("#r-invia").addEventListener("click", () => {
     const nome = $("#r-nome").value.trim(); if (!nome) return avvisa("Scrivi il nome dell'attività");
     const c = comuneDi($("#r-comune").value), catId = $("#r-cat").value;
-    const tipo = { mangiare: "amenity=restaurant", spesa: "shop=convenience", sport: "leisure=sports_centre", salute: "amenity=doctors", cura: "shop=hairdresser", servizi: "office=company", dormire: "tourism=guest_house" }[catId];
+    const tipo = { mangiare: "amenity=restaurant", spesa: "shop=convenience", negozi: "shop=gift", sport: "leisure=sports_centre", salute: "amenity=doctors", cura: "shop=hairdresser", auto: "shop=car_repair", servizi: "office=company", dormire: "tourism=guest_house" }[catId];
     const nuove = leggi("nuove-attivita", []);
     nuove.push({ osm: "nuova/" + Date.now(), nome, tipo, catId, comune: c.id, lat: c.centro.lat + (Math.random() - .5) * .002, lon: c.centro.lon + (Math.random() - .5) * .002,
       indirizzo: $("#r-ind").value, telefono: $("#r-tel").value, orari: $("#r-orari").value, sito: $("#r-sito").value, descrizione: $("#r-desc").value, nuova: true });
@@ -717,7 +791,7 @@ function avvisa(html) {
   el.innerHTML = html; el.classList.add("vedi"); clearTimeout(tAvv); tAvv = setTimeout(() => el.classList.remove("vedi"), 2400);
 }
 function disegnaCategorie() {
-  $("#categorie").innerHTML = CATEGORIE.map((c) => `<button class="chip" data-cat="${c.id}" aria-pressed="${S.cat === c.id}"><span class="punto" style="background:${c.colore}"></span>${c.nome}</button>`).join("");
+  $("#categorie").innerHTML = CATEGORIE.map((c) => `<button class="chip" data-cat="${c.id}" aria-pressed="${S.cat === c.id}">${icona(c.icona)}${c.nome}</button>`).join("");
   $$("[data-cat]").forEach((b) => b.addEventListener("click", () => {
     S.cat = S.cat === b.dataset.cat ? null : b.dataset.cat; S.sotto = null; S.testo = ""; $("#cerca").value = ""; aggiorna(); altezza("medio");
   }));
