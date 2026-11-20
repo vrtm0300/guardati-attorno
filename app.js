@@ -1035,6 +1035,55 @@ function posizione() {
   }, () => avvisa("Non riesco a leggere la posizione"), { timeout: 10000, maximumAge: 300000 });
 }
 
+/* Il pannello si trascina con il dito: dalla maniglia, oppure dal contenuto quando è già in cima. */
+let trascinato = false;
+function trascinaFoglio() {
+  const f = $("#foglio"), c = $("#corpo");
+  const posizioni = () => {
+    const disp = innerHeight - parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--barra-h") || 64);
+    return { basso: 132, medio: innerHeight * 0.48, alto: disp - 76 };
+  };
+  let y0 = null, h0 = 0, t0 = 0, ultimoY = 0, attivo = false, daC = false;
+  const inizio = (ev, daContenuto) => {
+    const p = ev.touches ? ev.touches[0] : ev;
+    daC = daContenuto;
+    y0 = p.clientY; ultimoY = y0; h0 = f.getBoundingClientRect().height; t0 = performance.now(); attivo = false; trascinato = false;
+  };
+  const muovi = (ev) => {
+    if (y0 == null) return;
+    const p = ev.touches ? ev.touches[0] : ev, dy = y0 - p.clientY;
+    if (!attivo && Math.abs(dy) < 8) return;
+    // dal contenuto: verso il basso solo se il contenuto è in cima; verso l'alto solo se il pannello non è già alzato del tutto
+    if (!attivo && daC && ((dy < 0 && c.scrollTop > 0) || (dy > 0 && S.altezza === "alto"))) { y0 = null; return; }
+    attivo = true; trascinato = true;
+    const pos = posizioni(), h = Math.max(pos.basso - 40, Math.min(pos.alto, h0 + dy));
+    f.style.transition = "none"; f.style.height = h + "px";
+    ultimoY = p.clientY;
+    if (ev.cancelable) ev.preventDefault();
+  };
+  const fine = () => {
+    if (y0 == null) return;
+    if (attivo) {
+      const pos = posizioni(), h = f.getBoundingClientRect().height;
+      const vel = (y0 - ultimoY) / Math.max(performance.now() - t0, 1); // px/ms, positivo verso l'alto
+      let meta = Object.entries(pos).sort((a, b) => Math.abs(a[1] - h) - Math.abs(b[1] - h))[0][0];
+      if (Math.abs(vel) > 0.5) { const ordine = ["basso", "medio", "alto"], i = ordine.indexOf(S.altezza), passo = ordine[Math.max(0, Math.min(2, i + (vel > 0 ? 1 : -1)))]; const j = ordine.indexOf(meta), k = ordine.indexOf(passo); meta = vel > 0 ? ordine[Math.max(j, k)] : ordine[Math.min(j, k)]; }
+      f.style.transition = ""; void f.offsetHeight;  // riparte l'animazione verso la posizione scelta
+      f.style.height = ""; altezza(meta);
+      setTimeout(() => { trascinato = false; }, 50);
+    }
+    y0 = null; attivo = false;
+  };
+  for (const el of [$("#maniglia"), c]) {
+    el.addEventListener("touchstart", (ev) => inizio(ev, el === c), { passive: true });
+    el.addEventListener("mousedown", (ev) => { if (el === $("#maniglia")) inizio(ev, false); });
+  }
+  addEventListener("touchmove", muovi, { passive: false });
+  addEventListener("mousemove", muovi);
+  addEventListener("touchend", fine);
+  addEventListener("mouseup", fine);
+}
+
 function avvia() {
   riempiIcone();
   if (leggi("grande", false)) document.documentElement.classList.add("grande");
@@ -1044,7 +1093,8 @@ function avvia() {
     maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(mappa);
   strato = (L.markerClusterGroup ? L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 44, disableClusteringAtZoom: 17 }) : L.layerGroup()).addTo(mappa);
   $("#cerca").addEventListener("input", (ev) => { S.testo = ev.target.value; S.cat = null; S.sotto = null; aggiorna(); if (S.testo) altezza("medio"); });
-  $("#maniglia").addEventListener("click", () => altezza(S.altezza === "basso" ? "medio" : S.altezza === "medio" ? "alto" : "basso"));
+  $("#maniglia").addEventListener("click", () => { if (trascinato) return; altezza(S.altezza === "basso" ? "medio" : S.altezza === "medio" ? "alto" : "basso"); });
+  trascinaFoglio();
   $("#tasto-pos").addEventListener("click", posizione);
   $("#prenota-fab").addEventListener("click", pannelloPrenota);
   $("#luogo-sel").addEventListener("click", scegliComune);
