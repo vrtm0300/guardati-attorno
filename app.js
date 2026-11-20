@@ -307,6 +307,7 @@ async function apriLuogo(osm, centra = false) {
       <button class="btn verticale ${preferito ? "attivo" : ""}" data-fai="solito">${icona("cuore")}${preferito ? "Tra i soliti" : "Tra i miei soliti"}</button>
       <a class="btn verticale" href="${vai}" target="_blank" rel="noopener">${icona("vai")}Portami lì</a>
       ${tel ? `<a class="btn verticale" href="${tel}">${icona("telefono")}Chiama</a>` : l.cat.azione === "visita" ? "" : `<button class="btn verticale" data-fai="visita">${icona("percorso")}Itinerario</button>`}
+      ${COSE_PER_CAT[l.cat.id] ? `<button class="btn" style="grid-column:1/-1" data-organizza="${esc(l.osm)}">${icona("persone")} Organizza un incontro qui</button>` : ""}
     </div>
     ${infoUtili(l)}
     ${progettiDi(l).map((x) => `<div class="riquadro"><h3>${icona("libro")} Approfondisci su ${esc(x.progetto.nome)}</h3><p class="nota-tenue" style="margin:4px 0 0">${esc(x.progetto.nota)}</p>
@@ -318,6 +319,7 @@ async function apriLuogo(osm, centra = false) {
     <p class="fonte">Dati: <a href="https://www.openstreetmap.org/${esc(l.osm)}" target="_blank" rel="noopener">OpenStreetMap</a>${l.foto ? ' · foto: <a href="' + esc(l.foto_fonte || l.foto.replace("Special:FilePath/", "File:").replace(/\?width=\d+$/, "")) + '" target="_blank" rel="noopener">' + (l.foto_fonte ? "Wikipedia" : "Wikimedia Commons") + '</a>' : ""}</p>`);
   $("#chiudi").addEventListener("click", () => { elenco(); disegnaPin(); altezza("basso"); });
   $$("[data-fai]", $("#corpo")).forEach((b) => b.addEventListener("click", () => fai(b.dataset.fai, l)));
+  $$("[data-organizza]", $("#corpo")).forEach((b) => b.addEventListener("click", () => window.vai("proponi", l.osm))); // "vai" qui è il link di Maps
   if (S.altezza === "basso") altezza("medio");
   if (l.cat.id === "cultura" || l.cat.id === "natura") sapereDi(l);
   if (l.cat.id === "muoversi") busDi(l);
@@ -486,7 +488,7 @@ function fai(azione, l) {
       <div class="scelte">${giorni.map((x, i) => `<button class="scelta" data-g="${i}" aria-pressed="${i === g}"><small>${x.nome}</small>${x.num}</button>`).join("")}</div>
       <p class="domanda">A che ora?</p>
       <div class="scelte a-capo">${orari.map((h) => `<button class="scelta" data-o="${h}" aria-pressed="${h === o}" ${occupato(g, h, l.osm) ? "disabled" : ""}>${h}</button>`).join("")}</div>
-      ${azione === "tavolo" ? `<label class="campo">Quante persone?<input id="persone" type="number" min="1" value="2"></label>` : ""}`,
+      ${azione === "tavolo" ? `<label class="campo">Quante persone?<input id="persone" type="number" min="1" value="${S.persone || 2}"></label>` : ""}`,
     () => { if (!o) { avvisa("Scegli un orario"); return false; }
       const d = new Date(giorni[g].d); const [hh, mm] = o.split(":"); d.setHours(+hh, +mm);
       aggiungiAgenda({ tipo: azione === "tavolo" ? "Tavolo" : azione === "campo" ? "Campo" : "Appuntamento", osm: l.osm, nome: nomeDi(l), quando: d.toISOString(),
@@ -593,9 +595,10 @@ const MODULI = {
   avvisi: { nome: "Avvisi del mio paese", icona: "bacheca", desc: () => "Solo quello che hai scelto di vedere", apri: () => vai("bacheca") },
   punti: { nome: "Punti e crediti", icona: "moneta", desc: () => { const lv = livello(); return `${lv.nome} · ${lv.punti} punti · € ${lv.crediti} di crediti`; }, apri: () => vai("punti") },
   solidale: { nome: "Arrotondamento solidale", icona: "dono", desc: () => leggi("arrotonda", false) ? `Attivo · donati € ${leggi("donato", 0).toFixed(2).replace(".", ",")}` : "Arrotonda gli ordini e aiuta un'associazione", apri: () => { const v = !leggi("arrotonda", false); scrivi("arrotonda", v); avvisa(v ? "Grazie: ogni ordine aiuta il paese" : "Arrotondamento spento"); paginaProfilo(); } },
+  incontri: { nome: "I miei incontri", icona: "persone", desc: () => { const n = leggi("partecipo", []).length + leggi("incontri", []).length; return n ? `${n} in programma` : "Una pizza, un aperitivo, una partita"; }, apri: () => vai("incontri") },
   attivita: { nome: "La mia attività", icona: "attivita", desc: () => { const r = leggi("rivendicate", []).length; return r ? `Ne gestisci ${r}` : "Riscattala gratis o registrala"; }, apri: () => vai("registra") },
 };
-const miei = () => leggi("moduli", ["soliti", "bus"]);
+const miei = () => leggi("moduli", ["soliti", "incontri", "bus"]);
 
 /* ================= Prenota: i tuoi soliti e i servizi vicini ================= */
 function pannelloPrenota() {
@@ -662,7 +665,7 @@ function paginaBacheca(filtro = null) {
   const u = utente(), scelti = u?.bacheca || Object.keys(TIPI_BACHECA);
   const voci = leggi("bacheca-mie", []).concat(BACHECA).filter((x) => scelti.includes(x.tipo)).filter((x) => !filtro || x.tipo === filtro)
     .filter((x) => !u?.soloMioComune || !x.comune || x.comune === u.comune);
-  pagina(`<h1>Bacheca</h1><p class="nota-tenue">Avvisi dei Comuni, offerte delle attività, eventi e associazioni. Vedi solo ciò che hai scelto.</p>
+  pagina(`<h1>Bacheca</h1>${segmenti("avvisi")}<p class="nota-tenue">Avvisi dei Comuni, offerte delle attività, eventi e associazioni. Vedi solo ciò che hai scelto.</p>
     <div class="fila">${[[null, "Tutto"], ...Object.entries(TIPI_BACHECA).filter(([k]) => scelti.includes(k))].map(([k, n]) => `<button class="chip" data-filtro="${k ?? ""}" aria-pressed="${filtro === k}">${n}</button>`).join("")}</div>
     ${voci.map((x) => `<div class="carta ${x.urgente ? "urgente" : ""}">
         <span class="etich">${esc(TIPI_BACHECA[x.tipo])}</span> ${x.esempio ? '<span class="etich demo">Esempio</span>' : ""} ${x.mia ? '<span class="etich ok">Tua</span>' : ""}
@@ -671,6 +674,122 @@ function paginaBacheca(filtro = null) {
     <div class="carta"><h3>Scegli cosa vedere</h3><p class="nota-tenue">Tutti possono comunicare e farsi conoscere, ma decidi tu cosa arriva sul tuo telefono.</p>
       <div class="azioni" style="grid-template-columns:1fr"><button class="btn" data-apri="preferenze">Cambia le preferenze</button></div></div>`);
   $$("[data-filtro]").forEach((b) => b.addEventListener("click", () => paginaBacheca(b.dataset.filtro || null)));
+}
+
+/* ================= Community: gli Incontri ================= */
+const segmenti = (attivo) => `<div class="segmenti" role="tablist">
+  <button role="tab" aria-selected="${attivo === "avvisi"}" data-apri="bacheca">Avvisi</button>
+  <button role="tab" aria-selected="${attivo === "incontri"}" data-apri="incontri">Incontri</button></div>`;
+const COSE = {
+  "Una pizza": { cat: "mangiare", sotto: 0, gusto: "Pizza e street food" },
+  "Bere qualcosa": { cat: "mangiare", sotto: 4, gusto: "Vita notturna" },
+  "Un caffè": { cat: "mangiare", sotto: 4, gusto: "Caffè e dolci" },
+  "Cena tipica": { cat: "mangiare", sotto: 1, gusto: "Cucina tipica" },
+  "Calcetto o tennis": { cat: "sport", sotto: null, gusto: "Sport" },
+  "Una passeggiata": { cat: "natura", sotto: null, gusto: "Natura e passeggiate" },
+  "Una visita": { cat: "cultura", sotto: null, gusto: "Cultura e storia" },
+};
+const COSE_PER_CAT = { mangiare: "Una pizza", sport: "Calcetto o tennis", natura: "Una passeggiata", cultura: "Una visita" };
+const MINORI = ["Fino a 13", "14–17"];
+function prossimo(giorniAvanti, ora) { const d = new Date(); d.setDate(d.getDate() + giorniAvanti); const [h, m] = ora.split(":"); d.setHours(+h, +m, 0, 0); return d.toISOString(); }
+let ESEMPI_INCONTRI = null;
+function esempiIncontri() {
+  if (ESEMPI_INCONTRI) return ESEMPI_INCONTRI;
+  const casa = utente()?.comune || "teggiano";
+  const vicino = (f) => TUTTI.filter(f).sort((a, b) => km(comuneDi(casa).centro, a) - km(comuneDi(casa).centro, b))[0];
+  const pizza = vicino((l) => l.cat.id === "mangiare" && CATEGORIE[0].sotto[0][1](l));
+  const bar = vicino((l) => l.tipo === "amenity=bar" || l.tipo === "amenity=pub") || vicino((l) => l.tipo === "amenity=cafe");
+  const campo = vicino((l) => l.cat.id === "sport" && (l.sport || "").includes("soccer"));
+  const sab = (6 - new Date().getDay() + 7) % 7 || 7;
+  ESEMPI_INCONTRI = [
+    pizza && { id: "es-pizza", esempio: true, cosa: "Una pizza", osm: pizza.osm, quando: prossimo(sab, "20:30"), max: 8, partecipanti: ["Anna", "Luca", "Gerardo"], aperto: "Tutte", da: "Anna", note: "Pizza e due chiacchiere, chi c'è c'è." },
+    bar && { id: "es-bar", esempio: true, cosa: "Bere qualcosa", osm: bar.osm, quando: prossimo(1, "19:00"), max: 6, partecipanti: ["Marco", "Sara"], aperto: "Tutte", da: "Marco", note: "Aperitivo dopo il lavoro." },
+    campo && { id: "es-calcetto", esempio: true, cosa: "Calcetto o tennis", osm: campo.osm, quando: prossimo(sab + 1, "10:00"), max: 10, partecipanti: ["Nicola", "Pietro", "Vincenzo", "Rocco", "Antonio"], aperto: "Tutte", da: "Nicola", note: "Ne mancano cinque per fare due squadre." },
+  ].filter(Boolean);
+  return ESEMPI_INCONTRI;
+}
+const tuttiIncontri = () => leggi("incontri", []).concat(esempiIncontri()).filter((x) => new Date(x.quando) > Date.now() - 3 * 3600e3);
+function visibile(x, u) {
+  const minore = MINORI.includes(u?.eta);
+  if (minore) return x.aperto === u.eta;            // i minori vedono solo gli incontri della loro fascia
+  return x.aperto === "Tutte" || x.aperto === u?.eta;
+}
+
+function paginaIncontri(filtro = "tutti") {
+  const u = utente(), part = leggi("partecipo", []), gusti = u?.gusti || [];
+  const lista = tuttiIncontri().filter((x) => visibile(x, u)).map((x) => ({ ...x, l: TUTTI.find((y) => y.osm === x.osm) })).filter((x) => x.l)
+    .filter((x) => filtro !== "gusti" || gusti.includes(COSE[x.cosa]?.gusto))
+    .filter((x) => filtro !== "paese" || x.l.comune === u?.comune)
+    .filter((x) => filtro !== "miei" || x.mio || part.includes(x.id))
+    .sort((a, b) => new Date(a.quando) - new Date(b.quando));
+  pagina(`<h1>Bacheca</h1>${segmenti("incontri")}
+    <p class="nota-tenue">Una pizza, un aperitivo, una partita: ci si organizza qui e ci si vede in un posto del paese.</p>
+    <div class="azioni" style="grid-template-columns:1fr;margin:4px 0 10px"><button class="btn accento pieno" data-apri="proponi">${icona("piu")} Proponi un incontro</button></div>
+    <div class="fila">${[["tutti", "Tutti"], ["gusti", "Per i miei gusti"], ["paese", "Il mio paese"], ["miei", "I miei"]].map(([k, n]) => `<button class="chip" data-f="${k}" aria-pressed="${filtro === k}">${n}</button>`).join("")}</div>
+    ${lista.map((x) => {
+      const ci = x.mio || part.includes(x.id), n = x.partecipanti.length + (part.includes(x.id) ? 1 : 0);
+      return `<div class="carta">
+        <span class="etich">${esc(x.cosa)}</span> ${x.esempio ? '<span class="etich demo">Esempio</span>' : ""} ${x.mio ? '<span class="etich ok">Organizzi tu</span>' : ""} ${x.aperto !== "Tutte" ? `<span class="etich">${esc(x.aperto)} anni</span>` : ""}
+        <h3>${esc(nomeDi(x.l))}</h3>
+        <p>${esc(fmtData(x.quando))} · ${esc(comuneDi(x.l.comune)?.nome || "")}</p>
+        ${x.note ? `<p class="nota-tenue">«${esc(x.note)}» — ${esc(x.da)}</p>` : ""}
+        <div class="partecipanti"><div class="facce">${x.partecipanti.slice(0, 5).map((p) => `<span>${esc(p[0])}</span>`).join("")}</div><small>${n} ${n === 1 ? "persona" : "persone"} · ${Math.max(x.max - n, 0)} posti liberi</small></div>
+        <div class="azioni">
+          ${x.mio ? `<button class="btn accento" data-prenota-gruppo="${esc(x.id)}">${icona("calendario")} Prenota per ${n}</button>`
+            : `<button class="btn ${ci ? "primario" : "accento"}" data-partecipo="${esc(x.id)}">${ci ? `${icona("spunta")} Ci sono` : "Partecipo"}</button>`}
+          <button class="btn" data-vedi="${esc(x.osm)}">${icona("luogo")} Sul posto</button></div></div>`;
+    }).join("") || `<div class="vuoto">${icona("persone")}<p>Nessun incontro con questi filtri.<br>Proponine uno tu: bastano quattro tocchi.</p></div>`}
+    <p class="fonte">Gli incontri si fanno solo in luoghi pubblici. Si vedono i nomi, mai i numeri di telefono. Chi ha meno di 18 anni vede solo gli incontri della sua età.</p>`);
+  $$("[data-f]").forEach((b) => b.addEventListener("click", () => paginaIncontri(b.dataset.f)));
+  $$("[data-vedi]").forEach((b) => b.addEventListener("click", () => { vai("mappa"); azzera(); S.comune = null; aggiorna(); apriLuogo(b.dataset.vedi, true); }));
+  $$("[data-partecipo]").forEach((b) => b.addEventListener("click", () => {
+    const id = b.dataset.partecipo, pp = leggi("partecipo", []), x = tuttiIncontri().find((y) => y.id === id), l = TUTTI.find((y) => y.osm === x.osm);
+    if (pp.includes(id)) { scrivi("partecipo", pp.filter((y) => y !== id)); scrivi("agenda", leggi("agenda", []).filter((a) => a.incontro !== id)); contaAgenda(); avvisa("Non partecipi più"); }
+    else { pp.push(id); scrivi("partecipo", pp); aggiungiAgenda({ tipo: "Incontro", incontro: id, osm: x.osm, nome: `${x.cosa} · ${nomeDi(l)}`, quando: x.quando, dettaglio: `con ${x.partecipanti.join(", ")}` }); guadagna(5, "Ci sei: è in Agenda"); }
+    paginaIncontri(filtro);
+  }));
+  $$("[data-prenota-gruppo]").forEach((b) => b.addEventListener("click", () => {
+    const x = tuttiIncontri().find((y) => y.id === b.dataset.prenotaGruppo), l = TUTTI.find((y) => y.osm === x.osm);
+    vai("mappa"); azzera(); aggiorna(); apriLuogo(l.osm, true);
+    S.persone = x.partecipanti.length; if (["tavolo", "campo", "appuntamento"].includes(l.cat.azione)) fai(l.cat.azione, l); S.persone = null;
+  }));
+}
+
+function paginaProponi(osm) {
+  const u = utente(), dal = osm ? TUTTI.find((l) => l.osm === osm) : null;
+  let cosa = dal ? COSE_PER_CAT[dal.cat.id] : "Una pizza";
+  const casa = centro();
+  const posti = (c) => { const k = COSE[c]; const cat = CATEGORIE.find((x) => x.id === k.cat);
+    return TUTTI.filter((l) => l.cat === cat && (k.sotto == null || cat.sotto[k.sotto][1](l))).sort((a, b) => km(casa, a) - km(casa, b)).slice(0, 30); };
+  const disegna = () => {
+    const elenco = posti(cosa); if (dal && !elenco.includes(dal)) elenco.unshift(dal);
+    pagina(`<h1>Proponi un incontro</h1><p class="nota-tenue">Scegli cosa, dove e quando. Gli altri vedono l'incontro in Bacheca e toccano «Partecipo».</p>
+      <p class="domanda">Cosa?</p>
+      <div class="scelte a-capo">${Object.keys(COSE).map((c) => `<button class="scelta" data-cosa="${c}" aria-pressed="${c === cosa}">${c}</button>`).join("")}</div>
+      <label class="campo">Dove?<select id="p-dove">${elenco.map((l) => `<option value="${esc(l.osm)}" ${dal && l.osm === dal.osm ? "selected" : ""}>${esc(nomeDi(l))} · ${esc(comuneDi(l.comune)?.nome || "")}</option>`).join("")}</select></label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <label class="campo">Giorno<input id="p-giorno" type="date" value="${new Date(Date.now() + 864e5).toISOString().slice(0, 10)}"></label>
+        <label class="campo">Ora<input id="p-ora" type="time" value="20:30"></label></div>
+      <label class="campo">Quante persone al massimo?<input id="p-max" type="number" min="2" value="8"></label>
+      <p class="domanda">Aperto a</p>
+      <div class="scelte a-capo">${MINORI.includes(u?.eta) ? `<button class="scelta" aria-pressed="true">${esc(u.eta)} anni</button>` : `<button class="scelta" data-aperto="Tutte" aria-pressed="true">Tutti</button><button class="scelta" data-aperto="${esc(u?.eta || "")}" aria-pressed="false">Solo ${esc(u?.eta || "la mia età")}</button>`}</div>
+      <label class="campo">Una riga per gli altri<input id="p-note" maxlength="120" placeholder="Es. pizza e due chiacchiere, chi c'è c'è"></label>
+      <div class="azioni" style="grid-template-columns:1fr"><button class="btn accento pieno" id="p-invia">Pubblica l'incontro</button></div>
+      <p class="fonte">Solo luoghi pubblici della mappa. Nessun numero di telefono viene mostrato.</p>`);
+    $$("[data-cosa]").forEach((b) => b.addEventListener("click", () => { cosa = b.dataset.cosa; disegna(); }));
+    let aperto = MINORI.includes(u?.eta) ? u.eta : "Tutte";
+    $$("[data-aperto]").forEach((b) => b.addEventListener("click", () => { aperto = b.dataset.aperto; $$("[data-aperto]").forEach((y) => y.setAttribute("aria-pressed", y === b)); }));
+    $("#p-invia").addEventListener("click", () => {
+      const quando = new Date(`${$("#p-giorno").value}T${$("#p-ora").value}`); if (isNaN(quando)) return avvisa("Scegli giorno e ora");
+      const x = { id: "mio-" + Date.now(), mio: true, cosa, osm: $("#p-dove").value, quando: quando.toISOString(), max: +$("#p-max").value || 8,
+        partecipanti: [u?.nome || "Tu"], aperto, da: u?.nome || "Tu", note: $("#p-note").value.trim() };
+      const tutti = leggi("incontri", []); tutti.push(x); scrivi("incontri", tutti);
+      const l = TUTTI.find((y) => y.osm === x.osm);
+      aggiungiAgenda({ tipo: "Incontro", incontro: x.id, osm: x.osm, nome: `${cosa} · ${nomeDi(l)}`, quando: x.quando, dettaglio: "lo organizzi tu" });
+      guadagna(15, "Incontro pubblicato"); paginaIncontri("miei");
+    });
+  };
+  disegna();
 }
 
 function paginaItinerari() {
@@ -854,10 +973,10 @@ function scegliComune() {
 
 function vai(v, arg) {
   S.vista = v;
-  const tab = { bus: "profilo", preferenze: "bacheca", registra: "profilo", dati: "profilo", punti: "profilo", moduli: "profilo" }[v] || v;
+  const tab = { bus: "profilo", preferenze: "bacheca", registra: "profilo", dati: "profilo", punti: "profilo", moduli: "profilo", incontri: "bacheca", proponi: "bacheca" }[v] || v;
   $$("#barra button").forEach((b) => b.classList.toggle("attiva", b.dataset.vista === tab));
   if (v === "mappa") { $("#pagina").hidden = true; setTimeout(() => mappa.invalidateSize(), 20); return; }
-  ({ itinerari: paginaItinerari, bacheca: paginaBacheca, agenda: paginaAgenda, profilo: paginaProfilo, bus: paginaBus, preferenze: paginaPreferenze, registra: paginaRegistra, dati: paginaDati, punti: paginaPunti, moduli: catalogoModuli })[v](arg);
+  ({ itinerari: paginaItinerari, bacheca: paginaBacheca, agenda: paginaAgenda, profilo: paginaProfilo, bus: paginaBus, preferenze: paginaPreferenze, registra: paginaRegistra, dati: paginaDati, punti: paginaPunti, moduli: catalogoModuli, incontri: paginaIncontri, proponi: paginaProponi })[v](arg);
 }
 
 /* ================= Benvenuto e registrazione ================= */
