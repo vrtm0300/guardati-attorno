@@ -15,7 +15,7 @@ const sport = (...s) => (l) => s.some((x) => (l.sport || "").includes(x));
 const e = (...f) => (l) => f.every((g) => g(l));
 const non = (f) => (l) => !f(l);
 
-const MARCA = "#0b4f6c";
+const MARCA = "#1d4e6b";
 /* Ogni categoria: nome che dice cosa contiene, icona a linea, sottofiltri che guidano,
    "info" = che cosa serve per decidere (lo pubblica l'attività), "prezzo" = si può ordinare dal più economico. */
 const CATEGORIE = [
@@ -247,11 +247,10 @@ function elenco() {
   corpo(`
     <h2 class="titolo-foglio">${S.comune && !cat && !S.testo ? `Cosa c'è a ${esc(dove)}` : titolo}</h2>
     <p class="nota-tenue">${lista.length} ${lista.length === 1 ? "posto" : "posti"}${S.comune ? "" : " in " + T.comuni.length + " comuni"}</p>
-    ${!cat && !S.testo ? scorciatoie() : ""}
     ${cat?.prezzo || S.testo ? `<div class="scelte" role="group" aria-label="Ordina">${[["vicino", "Più vicini"], ["prezzo", "Più economici"]].map(([k, n]) => `<button class="scelta" data-ordine="${k}" aria-pressed="${S.ordine === k}">${n}</button>`).join("")}</div>` : ""}
     ${lista.length ? lista.slice(0, 80).map(riga).join("") : vuotoCategoria(cat)}`);
   $$("[data-ordine]", $("#corpo")).forEach((b) => b.addEventListener("click", () => { S.ordine = b.dataset.ordine; disegnaPin(); elenco(); }));
-  $$("[data-scorcia]", $("#corpo")).forEach((b) => b.addEventListener("click", () => SCORCIATOIE[b.dataset.scorcia].fai()));
+
   $$("[data-osm]", $("#corpo")).forEach((b) => b.addEventListener("click", () => apriLuogo(b.dataset.osm, true)));
 }
 function riga(l) {
@@ -585,21 +584,18 @@ const SERVIZI_EXTRA = [
   ["stella", "Strumenti con l'intelligenza artificiale", "Risposte ai clienti, menù tradotti, preventivi"],
 ];
 
-/* ================= Scorciatoie fissate dall'utente ================= */
-const SCORCIATOIE = {
-  soliti: { nome: "I miei soliti", icona: "cuore", fai: () => pannelloPrenota() },
-  bus: { nome: "Bus da casa", icona: "muoversi", fai: () => vai("bus") },
-  itinerario: { nome: "Il mio itinerario", icona: "percorso", fai: () => vai("itinerari") },
-  farmacie: { nome: "Farmacie", icona: "salute", fai: () => { azzera(); S.cat = "salute"; S.sotto = 0; aggiorna(); altezza("medio"); } },
-  bacheca: { nome: "Bacheca", icona: "bacheca", fai: () => vai("bacheca") },
-  mangiare: { nome: "Dove mangiare", icona: "mangiare", fai: () => { azzera(); S.cat = "mangiare"; aggiorna(); altezza("medio"); } },
-  grande: { nome: "Testo grande", icona: "testo", fai: () => { const g = !document.documentElement.classList.contains("grande"); document.documentElement.classList.toggle("grande", g); scrivi("grande", g); } },
+/* ================= Le mie cose: moduli che l'utente aggiunge al Profilo ================= */
+const MODULI = {
+  soliti: { nome: "I miei soliti", icona: "cuore", desc: () => { const n = leggi("soliti", []).length; return n ? `${n} ${n === 1 ? "posto" : "posti"} da prenotare con un tocco` : "Il barbiere, il supermercato, il campo: tocca il cuore su un posto"; }, apri: () => { vai("mappa"); pannelloPrenota(); } },
+  bus: { nome: "Bus da casa", icona: "muoversi", desc: () => `Le partenze da ${comuneDi(utente()?.comune)?.nome || "casa tua"}`, apri: () => vai("bus") },
+  itinerario: { nome: "Il mio itinerario", icona: "percorso", desc: () => { const n = leggi("itinerario", []).length; return n ? `${n} tappe` : "I posti che vuoi vedere, in fila"; }, apri: () => vai("itinerari") },
+  farmacie: { nome: "Farmacie vicine", icona: "salute", desc: () => "Le più vicine a te, con il telefono", apri: () => { vai("mappa"); azzera(); S.cat = "salute"; S.sotto = 0; aggiorna(); altezza("medio"); } },
+  avvisi: { nome: "Avvisi del mio paese", icona: "bacheca", desc: () => "Solo quello che hai scelto di vedere", apri: () => vai("bacheca") },
+  punti: { nome: "Punti e crediti", icona: "moneta", desc: () => { const lv = livello(); return `${lv.nome} · ${lv.punti} punti · € ${lv.crediti} di crediti`; }, apri: () => vai("punti") },
+  solidale: { nome: "Arrotondamento solidale", icona: "dono", desc: () => leggi("arrotonda", false) ? `Attivo · donati € ${leggi("donato", 0).toFixed(2).replace(".", ",")}` : "Arrotonda gli ordini e aiuta un'associazione", apri: () => { const v = !leggi("arrotonda", false); scrivi("arrotonda", v); avvisa(v ? "Grazie: ogni ordine aiuta il paese" : "Arrotondamento spento"); paginaProfilo(); } },
+  attivita: { nome: "La mia attività", icona: "attivita", desc: () => { const r = leggi("rivendicate", []).length; return r ? `Ne gestisci ${r}` : "Riscattala gratis o registrala"; }, apri: () => vai("registra") },
 };
-const scorciatoieScelte = () => leggi("scorciatoie", ["soliti", "bus", "farmacie"]);
-function scorciatoie() {
-  const sc = scorciatoieScelte(); if (!sc.length) return "";
-  return `<div class="scelte" style="margin-bottom:6px">${sc.map((k) => SCORCIATOIE[k] ? `<button class="chip" data-scorcia="${k}">${icona(SCORCIATOIE[k].icona)}${SCORCIATOIE[k].nome}</button>` : "").join("")}</div>`;
-}
+const miei = () => leggi("moduli", ["soliti", "bus"]);
 
 /* ================= Prenota: i tuoi soliti e i servizi vicini ================= */
 function pannelloPrenota() {
@@ -692,7 +688,7 @@ function paginaItinerari() {
         <button class="chiudi" data-su="${i}" ${i ? "" : "disabled"} aria-label="Prima">${icona("su")}</button>
         <button class="chiudi" data-togli="${i}" aria-label="Togli">${icona("chiudi")}</button></div>`).join("")}</div>
       <div class="azioni" style="grid-template-columns:1fr"><a class="btn primario pieno" href="${dir(mio)}" target="_blank" rel="noopener">${icona("vai")} Parti con il navigatore</a></div>
-      ${vicini.length ? `<p class="sezione-t">Collegalo ai paesi vicini</p>${vicini.map(({ c, d }) => `<button class="riga" data-comune="${c.id}"><span class="segno" style="background:#0b4f6c14;color:#0b4f6c">${icona("luogo")}</span><span><strong>${esc(c.nome)}</strong><small>${TUTTI.filter((l) => l.comune === c.id && l.cat.id === "cultura").length} luoghi da vedere</small></span><span class="dist">${d.toFixed(0)} km</span></button>`).join("")}` : ""}`
+      ${vicini.length ? `<p class="sezione-t">Collegalo ai paesi vicini</p>${vicini.map(({ c, d }) => `<button class="riga" data-comune="${c.id}"><span class="segno" style="background:#1d4e6b14;color:#1d4e6b">${icona("luogo")}</span><span><strong>${esc(c.nome)}</strong><small>${TUTTI.filter((l) => l.comune === c.id && l.cat.id === "cultura").length} luoghi da vedere</small></span><span class="dist">${d.toFixed(0)} km</span></button>`).join("")}` : ""}`
       : `<div class="vuoto">${icona("percorso")}<p>Ancora vuoto. Apri un posto della Cultura e tocca «Aggiungi all'itinerario».</p></div>`}
     <p class="sezione-t">Un giro nel Vallo</p>
     <p class="nota-tenue">Un luogo con foto per ogni paese, da nord a sud. Proposto in automatico dai dati della mappa.</p>
@@ -718,60 +714,94 @@ function paginaBus(comune) {
       <p class="fonte">Info: ${esc(x.contatti)} · <a href="${esc(x.fonte)}" target="_blank" rel="noopener">fonte</a> · <a href="${esc(x.altri)}" target="_blank" rel="noopener">tutte le linee</a></p></div>`).join("")}`);
 }
 
-function paginaProfilo() {
-  const u = utente() || {}, lv = livello();
-  const soliti = leggi("soliti", []).length, riv = leggi("rivendicate", []).length;
-  pagina(`
-    <div class="profilo-testa"><span class="avatar">${esc((u.nome || "?")[0].toUpperCase())}</span>
-      <div><h1 style="margin:0">${esc(u.nome || "Ospite")}</h1><p class="nota-tenue" style="margin:0">${esc(comuneDi(u.comune)?.nome || "Vallo di Diano")}${u.eta ? " · " + esc(u.eta) : ""}</p></div></div>
+const MASCOTTE = `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="22" fill="#eef3f6"/><circle cx="24" cy="24" r="13" fill="none" stroke="#1d4e6b" stroke-width="5"/><circle cx="24" cy="24" r="4.5" fill="#d8a93a"/><circle cx="19.5" cy="21" r="1.4" fill="#1d4e6b"/><circle cx="28.5" cy="21" r="1.4" fill="#1d4e6b"/></svg>`;
 
+function paginaProfilo() {
+  const u = utente() || {}, scelti = miei();
+  pagina(`
+    <div class="profilo-testa"><span class="avatar">${MASCOTTE}</span>
+      <div style="flex:1"><h1 style="margin:0">${esc(u.nome || "Ospite")}</h1><p class="nota-tenue" style="margin:0">${esc(comuneDi(u.comune)?.nome || "Di passaggio")}${u.eta ? " · " + esc(u.eta) : ""}</p></div>
+      <button class="btn piccolo" data-apri="dati">${icona("modifica")} Modifica</button></div>
+
+    <div class="testa-sezione"><p class="sezione-t">Le mie cose</p><button class="btn piccolo" id="aggiungi-modulo">${icona("piu")} Aggiungi</button></div>
+    ${scelti.length ? `<div class="gruppo">${scelti.filter((k) => MODULI[k]).map((k) => `<button class="voce voce-btn" data-modulo="${k}">${icona(MODULI[k].icona)}<div><strong>${MODULI[k].nome}</strong><small>${esc(MODULI[k].desc())}</small></div>${icona("freccia")}</button>`).join("")}</div>`
+      : `<p class="nota-tenue">Aggiungi qui le funzioni che usi di più.</p>`}
+
+    <p class="sezione-t">Impostazioni</p>
+    <div class="gruppo">
+      <label class="voce">${icona("testo")}<div><strong>Testo grande</strong></div><input type="checkbox" id="grande" ${document.documentElement.classList.contains("grande") ? "checked" : ""}></label>
+      <button class="voce voce-btn" data-apri="dati">${icona("persona")}<div><strong>I miei dati e i miei gusti</strong><small>${esc((u.gusti || []).slice(0, 3).join(", ") || "Aggiungi i tuoi gusti per ricerche su misura")}</small></div>${icona("freccia")}</button>
+      <button class="voce voce-btn" data-apri="preferenze">${icona("bacheca")}<div><strong>Cosa vedere in Bacheca</strong></div>${icona("freccia")}</button>
+    </div>
+    <div class="azioni" style="grid-template-columns:1fr;margin-top:18px"><button class="btn" id="esci">${icona("uscita")} Ricomincia da capo</button></div>
+    <p class="fonte">I tuoi dati restano su questo telefono. Mappa e luoghi © OpenStreetMap, scaricati il ${esc(T.scaricati)}.</p>`);
+  $$("[data-modulo]").forEach((b) => b.addEventListener("click", () => MODULI[b.dataset.modulo].apri()));
+  $("#aggiungi-modulo").addEventListener("click", catalogoModuli);
+  $("#grande").addEventListener("change", (ev) => { document.documentElement.classList.toggle("grande", ev.target.checked); scrivi("grande", ev.target.checked); setTimeout(() => mappa.invalidateSize(), 50); });
+  $("#esci").addEventListener("click", () => { Object.keys(localStorage).filter((k) => k.startsWith(MEM)).forEach((k) => localStorage.removeItem(k)); location.reload(); });
+}
+function catalogoModuli() {
+  const scelti = miei();
+  pagina(`<h1>Le mie cose</h1><p class="nota-tenue">Tocca + per aggiungere una funzione al Profilo, − per toglierla.</p>
+    <div class="gruppo">${Object.entries(MODULI).map(([k, x]) => `<div class="voce">${icona(x.icona)}<div><strong>${x.nome}</strong><small>${esc(x.desc())}</small></div>
+      <button class="tondo ${scelti.includes(k) ? "dentro" : ""}" data-alterna="${k}" aria-label="${scelti.includes(k) ? "Togli" : "Aggiungi"} ${x.nome}">${icona(scelti.includes(k) ? "spunta" : "piu")}</button></div>`).join("")}</div>
+    <div class="azioni" style="grid-template-columns:1fr"><button class="btn primario pieno" data-apri="profilo">Fatto</button></div>`);
+  $$("[data-alterna]").forEach((b) => b.addEventListener("click", () => {
+    const m = miei(), k = b.dataset.alterna, i = m.indexOf(k);
+    if (i >= 0) m.splice(i, 1); else m.push(k);
+    scrivi("moduli", m); catalogoModuli();
+  }));
+}
+function paginaPunti() {
+  const lv = livello();
+  pagina(`<h1>Punti e crediti</h1><p class="nota-tenue">Usi il territorio, lo fai crescere: prenotare, scoprire e aggiungere informazioni verificate ti fa salire di livello.</p>
     <div class="livello"><small>Livello ${lv.n}</small><div><strong style="font-size:1.25rem">${lv.nome}</strong></div>
       <div class="barra-liv"><i style="width:${lv.avanzamento}%"></i></div>
-      <small>${lv.punti} punti · altri ${100 - lv.avanzamento} per il prossimo livello. Prenoti, scopri, contribuisci: cresci con il territorio.</small></div>
-    <div class="saldo"><div><small>Crediti del territorio</small><b>€ ${lv.crediti}</b><small>da spendere come sconto nelle attività aderenti</small></div>
-      <div><small>Donato al paese</small><b>€ ${String(leggi("donato", 0).toFixed(2)).replace(".", ",")}</b><small>con l'arrotondamento solidale</small></div></div>
+      <small>${lv.punti} punti · altri ${100 - lv.avanzamento} per il prossimo livello</small></div>
+    <div class="saldo"><div><small>Crediti del territorio</small><b>€ ${lv.crediti}</b><small>sconto nelle attività aderenti</small></div>
+      <div><small>Donato al paese</small><b>€ ${leggi("donato", 0).toFixed(2).replace(".", ",")}</b><small>con l'arrotondamento solidale</small></div></div>
+    <p class="fonte"><span class="etich demo">Dimostrazione</span> Punti, crediti e donazioni non sono ancora collegati a un sistema vero.</p>`);
+}
 
-    <p class="sezione-t">Le mie cose</p>
-    <div class="gruppo">
-      <div class="voce">${icona("cuore")}<div><strong>I miei soliti</strong><small>${soliti} ${soliti === 1 ? "posto" : "posti"} da prenotare con un tocco</small></div><button class="chiudi" id="vai-soliti" aria-label="Apri">${icona("freccia")}</button></div>
-      <div class="voce">${icona("muoversi")}<div><strong>Orari dei bus</strong><small>Lamanna e Curcio, in evidenza le tue fermate</small></div><button class="chiudi" data-apri="bus" aria-label="Apri">${icona("freccia")}</button></div>
-    </div>
-
-    <p class="sezione-t">Le mie scorciatoie</p>
-    <p class="nota-tenue" style="margin-top:-4px">Scegli fino a 4 funzioni da tenere in cima alla mappa.</p>
-    <div class="gruppo">${Object.entries(SCORCIATOIE).map(([k, x]) => `<label class="voce">${icona(x.icona)}<div><strong>${x.nome}</strong></div><input type="checkbox" data-pin="${k}" ${scorciatoieScelte().includes(k) ? "checked" : ""}></label>`).join("")}</div>
-
-    <p class="sezione-t">Come la uso</p>
-    <div class="gruppo">
-      <div class="voce">${icona("testo")}<div><strong>Testo grande</strong><small>Lettere e pulsanti più grandi</small></div><input type="checkbox" id="grande" ${document.documentElement.classList.contains("grande") ? "checked" : ""}></div>
-      <div class="voce">${icona("sveglia")}<div><strong>Promemoria</strong><small>${u.promemoria === "sveglia" ? "Sveglia il giorno prima e un'ora prima" : "Nel calendario del telefono"}</small></div>
-        <select id="promemoria" class="btn piccolo"><option value="calendario">Calendario</option><option value="sveglia" ${u.promemoria === "sveglia" ? "selected" : ""}>Sveglia</option></select></div>
-      <div class="voce">${icona("bacheca")}<div><strong>Cosa vedere in Bacheca</strong><small>${(u.bacheca || Object.keys(TIPI_BACHECA)).map((k) => TIPI_BACHECA[k]).join(", ")}</small></div><button class="chiudi" data-apri="preferenze" aria-label="Cambia">${icona("freccia")}</button></div>
-    </div>
-
-    <p class="sezione-t">Sostieni il paese</p>
-    <div class="gruppo">
-      <div class="voce">${icona("dono")}<div><strong>Arrotondamento solidale</strong><small>Arrotonda ogni ordine all'euro e dona la differenza a un'associazione del tuo paese</small></div><input type="checkbox" id="arrotonda" ${leggi("arrotonda", false) ? "checked" : ""}></div>
-    </div>
-
-    <p class="sezione-t">Hai un'attività?</p>
-    <div class="gruppo">
-      <div class="voce">${icona("nfc")}<div><strong>Riscatta gratis la tua scheda</strong><small>Cerca la tua attività sulla mappa e tocca «È la tua attività?»${riv ? ` · ne gestisci ${riv}` : ""}</small></div></div>
-      <div class="voce">${icona("attivita")}<div><strong>Non sei sulla mappa?</strong><small>Registrati gratis: con i tuoi dati creiamo anche il profilo Google dell'attività</small></div><button class="chiudi" data-apri="registra" aria-label="Registra">${icona("freccia")}</button></div>
-    </div>
-
-    <div class="azioni" style="grid-template-columns:1fr;margin-top:22px"><button class="btn" id="esci">${icona("uscita")} Ricomincia da capo</button></div>
-    <p class="fonte">I tuoi dati restano su questo telefono. Mappa e luoghi © OpenStreetMap, scaricati il ${esc(T.scaricati)}. Punti, crediti e donazioni sono una dimostrazione.</p>`);
-  $$("[data-pin]").forEach((c) => c.addEventListener("change", () => {
-    const scelte = $$("[data-pin]").filter((x) => x.checked).map((x) => x.dataset.pin);
-    if (scelte.length > 4) { c.checked = false; return avvisa("Al massimo 4 scorciatoie"); }
-    scrivi("scorciatoie", scelte); elenco();
-  }));
-  $("#grande").addEventListener("change", (ev) => { document.documentElement.classList.toggle("grande", ev.target.checked); scrivi("grande", ev.target.checked); setTimeout(() => mappa.invalidateSize(), 50); });
-  $("#promemoria").addEventListener("change", (ev) => { scrivi("utente", { ...utente(), promemoria: ev.target.value }); paginaProfilo(); });
-  $("#arrotonda").addEventListener("change", (ev) => { scrivi("arrotonda", ev.target.checked); avvisa(ev.target.checked ? "Grazie: ogni ordine aiuta il paese" : "Arrotondamento spento"); });
-  $("#vai-soliti").addEventListener("click", () => { vai("mappa"); pannelloPrenota(); });
-  $("#esci").addEventListener("click", () => { Object.keys(localStorage).filter((k) => k.startsWith(MEM)).forEach((k) => localStorage.removeItem(k)); location.reload(); });
+/* ---- I miei dati: nome, paese, età, gusti. Si cambiano quando si vuole. ---- */
+const FASCE = ["Fino a 13", "14–17", "18–24", "25–34", "35–49", "50–64", "65–74", "75 e più"];
+const GUSTI = {
+  "Pizza e street food": ["mangiare"], "Cucina tipica": ["mangiare"], "Caffè e dolci": ["mangiare"], "Sport": ["sport"],
+  "Palestra e benessere": ["sport", "cura"], "Cultura e storia": ["cultura"], "Natura e passeggiate": ["natura"], "Eventi e feste": ["cultura"],
+  "Shopping": ["negozi"], "Famiglia e bambini": ["natura", "salute"], "Vita notturna": ["mangiare"], "Viaggi e gite": ["dormire", "muoversi"],
+};
+const anziano = (eta) => eta === "65–74" || eta === "75 e più";
+function moduloDati(u, pulsante) {
+  return `<label class="campo">Come ti chiami?<input id="d-nome" autocomplete="given-name" value="${esc(u.nome || "")}"></label>
+    <label class="campo">Dove vivi?<select id="d-comune">${T.comuni.slice().sort((a, c) => a.nome.localeCompare(c.nome)).map((c) => `<option value="${c.id}" ${c.id === (u.comune ?? "teggiano") ? "selected" : ""}>${esc(c.nome)}</option>`).join("")}<option value="" ${u.comune === null ? "selected" : ""}>Sono di passaggio</option></select></label>
+    <p class="domanda">Quanti anni hai?</p>
+    <div class="scelte a-capo">${FASCE.map((x) => `<button class="scelta" data-eta="${x}" aria-pressed="${u.eta === x}">${x}</button>`).join("")}</div>
+    <p class="domanda">Che cosa ti piace? <span class="nota-tenue" style="font-weight:400">Mettiamo prima le cose giuste per te</span></p>
+    <div class="scelte a-capo">${Object.keys(GUSTI).map((x) => `<button class="scelta" data-gusto="${x}" aria-pressed="${(u.gusti || []).includes(x)}">${x}</button>`).join("")}</div>
+    <p class="nota-tenue" id="d-spiega"></p>
+    <div class="azioni" style="grid-template-columns:1fr"><button class="btn accento pieno" id="d-salva">${pulsante}</button></div>`;
+}
+function collegaDati(r, u, fatto) {
+  let eta = u.eta || null; const gusti = new Set(u.gusti || []);
+  const spiega = () => { $("#d-spiega", r).textContent = !eta ? "" : anziano(eta) ? "Ti mettiamo la sveglia prima di ogni prenotazione e, se vuoi, il testo grande. Si cambia quando vuoi." : "Le prenotazioni potrai metterle nel calendario del telefono."; };
+  $$("[data-eta]", r).forEach((x) => x.addEventListener("click", () => { eta = x.dataset.eta; $$("[data-eta]", r).forEach((y) => y.setAttribute("aria-pressed", y === x)); spiega(); }));
+  $$("[data-gusto]", r).forEach((x) => x.addEventListener("click", () => { const g = x.dataset.gusto; gusti.has(g) ? gusti.delete(g) : gusti.add(g); x.setAttribute("aria-pressed", gusti.has(g)); }));
+  spiega();
+  $("#d-salva", r).addEventListener("click", () => {
+    const nuovo = { ...u, nome: $("#d-nome", r).value.trim() || "Ospite", comune: $("#d-comune", r).value || null, eta, gusti: [...gusti],
+      promemoria: u.promemoria || (anziano(eta) ? "sveglia" : "calendario"), bacheca: u.bacheca || Object.keys(TIPI_BACHECA) };
+    scrivi("utente", nuovo); fatto(nuovo);
+  });
+}
+function paginaDati() {
+  const u = utente() || {};
+  pagina(`<h1>I miei dati</h1><p class="nota-tenue">Servono a mostrarti prima ciò che ti interessa. Restano sul tuo telefono.</p>
+    ${moduloDati(u, "Salva")}
+    <p class="sezione-t">Promemoria</p>
+    <div class="gruppo"><div class="voce">${icona("sveglia")}<div><strong>Come ti ricordiamo le prenotazioni</strong></div>
+      <select id="promemoria" class="campo-in" style="width:auto"><option value="calendario">Calendario</option><option value="sveglia" ${u.promemoria === "sveglia" ? "selected" : ""}>Sveglia</option></select></div></div>`);
+  $("#promemoria").addEventListener("change", (ev) => scrivi("utente", { ...utente(), promemoria: ev.target.value }));
+  collegaDati($("#pagina"), u, (n) => { if (S.comune !== n.comune) { S.comune = n.comune; } aggiorna(); avvisa("Dati salvati"); vai("profilo"); });
 }
 
 function paginaPreferenze() {
@@ -812,8 +842,8 @@ function paginaRegistra() {
 
 function scegliComune() {
   corpo(`<div class="testa"><h2>Dove guardi?</h2><button class="chiudi" id="chiudi" aria-label="Chiudi">${icona("chiudi")}</button></div>
-    <button class="riga" data-c=""><span class="segno" style="background:#0b4f6c14;color:#0b4f6c">${icona("mappa")}</span><span><strong>Tutto il ${esc(T.nome)}</strong><small>${T.comuni.length} comuni</small></span><span></span></button>
-    ${T.comuni.slice().sort((a, b) => a.nome.localeCompare(b.nome)).map((c) => `<button class="riga" data-c="${c.id}"><span class="segno" style="background:#0b4f6c14;color:#0b4f6c">${icona("luogo")}</span><span><strong>${esc(c.nome)}</strong><small>${TUTTI.filter((l) => l.comune === c.id).length} posti</small></span><span class="dist">${S.comune === c.id ? icona("spunta") : ""}</span></button>`).join("")}`);
+    <button class="riga" data-c=""><span class="segno" style="background:#1d4e6b14;color:#1d4e6b">${icona("mappa")}</span><span><strong>Tutto il ${esc(T.nome)}</strong><small>${T.comuni.length} comuni</small></span><span></span></button>
+    ${T.comuni.slice().sort((a, b) => a.nome.localeCompare(b.nome)).map((c) => `<button class="riga" data-c="${c.id}"><span class="segno" style="background:#1d4e6b14;color:#1d4e6b">${icona("luogo")}</span><span><strong>${esc(c.nome)}</strong><small>${TUTTI.filter((l) => l.comune === c.id).length} posti</small></span><span class="dist">${S.comune === c.id ? icona("spunta") : ""}</span></button>`).join("")}`);
   altezza("alto");
   $("#chiudi").addEventListener("click", () => { elenco(); altezza("basso"); });
   $$("[data-c]", $("#corpo")).forEach((b) => b.addEventListener("click", () => {
@@ -824,10 +854,10 @@ function scegliComune() {
 
 function vai(v, arg) {
   S.vista = v;
-  const tab = { bus: "profilo", preferenze: "bacheca", registra: "profilo" }[v] || v;
+  const tab = { bus: "profilo", preferenze: "bacheca", registra: "profilo", dati: "profilo", punti: "profilo", moduli: "profilo" }[v] || v;
   $$("#barra button").forEach((b) => b.classList.toggle("attiva", b.dataset.vista === tab));
   if (v === "mappa") { $("#pagina").hidden = true; setTimeout(() => mappa.invalidateSize(), 20); return; }
-  ({ itinerari: paginaItinerari, bacheca: paginaBacheca, agenda: paginaAgenda, profilo: paginaProfilo, bus: paginaBus, preferenze: paginaPreferenze, registra: paginaRegistra })[v](arg);
+  ({ itinerari: paginaItinerari, bacheca: paginaBacheca, agenda: paginaAgenda, profilo: paginaProfilo, bus: paginaBus, preferenze: paginaPreferenze, registra: paginaRegistra, dati: paginaDati, punti: paginaPunti, moduli: catalogoModuli })[v](arg);
 }
 
 /* ================= Benvenuto e registrazione ================= */
@@ -835,25 +865,13 @@ function benvenuto() {
   const b = document.createElement("div"); b.className = "benvenuto";
   b.innerHTML = `<span class="marchio"><i></i>Guardati attorno</span>
     <h1>Il tuo territorio, a portata di mano.</h1>
-    <p class="nota-tenue">Prenota, compra, scopri e resta informato su tutto il ${esc(T.nome)}. Due domande e cominciamo.</p>
-    <label class="campo">Come ti chiami?<input id="b-nome" autocomplete="given-name"></label>
-    <label class="campo">Dove vivi?<select id="b-comune">${T.comuni.slice().sort((a, c) => a.nome.localeCompare(c.nome)).map((c) => `<option value="${c.id}" ${c.id === "teggiano" ? "selected" : ""}>${esc(c.nome)}</option>`).join("")}<option value="">Sono di passaggio</option></select></label>
-    <p class="domanda">Quanti anni hai?</p>
-    <div class="scelte a-capo" id="b-eta">${["Meno di 18", "18–35", "36–64", "65 e più"].map((x) => `<button class="scelta" data-eta="${x}" aria-pressed="false">${x}</button>`).join("")}</div>
-    <p class="nota-tenue" id="b-spiega"></p>
-    <div class="azioni" style="grid-template-columns:1fr"><button class="btn accento pieno" id="b-via">Comincia</button></div>
+    <p class="nota-tenue">Prenota, compra, scopri e resta informato su tutto il ${esc(T.nome)}. Qualche domanda e cominciamo: potrai cambiare tutto dopo.</p>
+    ${moduloDati({}, "Comincia")}
     <p class="fonte">I dati restano sul tuo telefono.</p>`;
   document.body.append(b);
-  let eta = null;
-  $$("[data-eta]", b).forEach((x) => x.addEventListener("click", () => {
-    eta = x.dataset.eta; $$("[data-eta]", b).forEach((y) => y.setAttribute("aria-pressed", y === x));
-    $("#b-spiega", b).textContent = eta === "65 e più" ? "Ti mettiamo il testo grande e la sveglia prima di ogni prenotazione. Si cambia quando vuoi." : "Le prenotazioni potrai metterle nel calendario del telefono.";
-  }));
-  $("#b-via", b).addEventListener("click", () => {
-    const anziano = eta === "65 e più";
-    scrivi("utente", { nome: $("#b-nome", b).value.trim() || "Ospite", comune: $("#b-comune", b).value || null, eta, promemoria: anziano ? "sveglia" : "calendario", bacheca: Object.keys(TIPI_BACHECA) });
-    if (anziano) { scrivi("grande", true); document.documentElement.classList.add("grande"); }
-    b.remove(); const u = utente(); if (u.comune) { S.comune = u.comune; } aggiorna(); mappa.invalidateSize();
+  collegaDati(b, {}, (u) => {
+    if (u.eta === "75 e più") { scrivi("grande", true); document.documentElement.classList.add("grande"); }
+    b.remove(); if (u.comune) S.comune = u.comune; aggiorna(); mappa.invalidateSize();
     guadagna(10, `Benvenuto, ${esc(u.nome)}`);
   });
 }
@@ -865,7 +883,9 @@ function avvisa(html) {
   el.innerHTML = html; el.classList.add("vedi"); clearTimeout(tAvv); tAvv = setTimeout(() => el.classList.remove("vedi"), 2400);
 }
 function disegnaCategorie() {
-  $("#categorie").innerHTML = CATEGORIE.map((c) => `<button class="chip" data-cat="${c.id}" aria-pressed="${S.cat === c.id}">${icona(c.icona)}${c.nome}</button>`).join("");
+  const preferite = new Set((utente()?.gusti || []).flatMap((g) => GUSTI[g] || []));
+  const ordinate = [...CATEGORIE].sort((a, b) => preferite.has(b.id) - preferite.has(a.id));
+  $("#categorie").innerHTML = ordinate.map((c) => `<button class="chip" data-cat="${c.id}" aria-pressed="${S.cat === c.id}">${icona(c.icona)}${c.nome}</button>`).join("");
   $$("[data-cat]").forEach((b) => b.addEventListener("click", () => {
     S.cat = S.cat === b.dataset.cat ? null : b.dataset.cat; S.sotto = null; S.testo = ""; $("#cerca").value = ""; aggiorna(); altezza("medio");
   }));
