@@ -2,7 +2,8 @@
    Il codice vale per qualunque territorio: i dati stanno in territori/<id>*.js. */
 
 /* ================= Dati caricati dai file del territorio ================= */
-let T = null, LINEE = [], BACHECA = [];
+let T = null, LINEE = [], BACHECA = [], PROGETTI = [];
+function registraProgetti(p) { PROGETTI = p; }
 function registraTerritorio(d) { T = d; }
 function registraLinee(l) { LINEE = l; }
 function registraBacheca(b) { BACHECA = b; }
@@ -309,6 +310,8 @@ async function apriLuogo(osm, centra = false) {
       ${tel ? `<a class="btn verticale" href="${tel}">${icona("telefono")}Chiama</a>` : l.cat.azione === "visita" ? "" : `<button class="btn verticale" data-fai="visita">${icona("percorso")}Itinerario</button>`}
     </div>
     ${infoUtili(l)}
+    ${progettiDi(l).map((x) => `<div class="riquadro"><h3>${icona("libro")} Approfondisci su ${esc(x.progetto.nome)}</h3><p class="nota-tenue" style="margin:4px 0 0">${esc(x.progetto.nota)}</p>
+      <div class="azioni" style="grid-template-columns:1fr"><a class="btn" href="${esc(x.url)}" target="_blank" rel="noopener">Apri la pagina del progetto</a></div></div>`).join("")}
     <div id="sapere"></div>
     ${l.cat.id !== "cultura" && l.cat.id !== "natura" && l.cat.id !== "muoversi" && !rivendicata ? `
       <div class="riquadro"><h3>È la tua attività?</h3><p>Riscattala gratis: pubblichi menù, listino e orari, ricevi prenotazioni e offerte in Bacheca.</p>
@@ -319,6 +322,73 @@ async function apriLuogo(osm, centra = false) {
   if (S.altezza === "basso") altezza("medio");
   if (l.cat.id === "cultura" || l.cat.id === "natura") sapereDi(l);
   if (l.cat.id === "muoversi") busDi(l);
+}
+
+/* Progetti di digitalizzazione culturale collegati a un luogo: quelli noti e quelli che gli ambasciatori hanno scansionato. */
+function progettiDi(l) {
+  const n = (l.nome || "").toLowerCase();
+  const noti = PROGETTI.filter((p) => p.comune === l.comune).flatMap((p) => p.luoghi.filter((x) => n.includes(x.parola)).slice(0, 1).map((x) => ({ progetto: p, url: x.url })));
+  const scansionati = leggi("collegamenti", []).filter((c) => c.osm === l.osm).map((c) => ({ progetto: { nome: c.dominio, nota: "Collegato da un ambasciatore con la scansione del QR o del tag sul posto. In attesa di verifica." }, url: c.url }));
+  return noti.concat(scansionati);
+}
+const linkDi = (l) => `${location.origin}${location.pathname}#luogo=${encodeURIComponent(l.osm)}`;
+
+/* ================= Tag NFC e codici QR ================= */
+function apriLettore(perLuogo = null) {
+  corpo(`
+    <div class="testa"><div><h2>${perLuogo ? "Collega un QR o un tag" : "Apri un tag o un QR"}</h2>
+      <p class="nota-tenue" style="margin:2px 0 0">${perLuogo ? `Scansiona il codice di un progetto culturale che si trova a ${esc(nomeDi(perLuogo))}: lo salviamo nella scheda, così non va perso.` : "I tag delle attività e dei luoghi aprono subito la loro scheda."}</p></div>
+      <button class="chiudi" id="chiudi" aria-label="Chiudi">${icona("chiudi")}</button></div>
+    <div class="azioni" style="grid-template-columns:1fr 1fr">
+      <button class="btn primario" id="leggi-nfc">${icona("nfc")} Tag NFC</button>
+      <button class="btn primario" id="leggi-qr">${icona("cerca")} Codice QR</button></div>
+    <video id="camera" playsinline muted style="width:100%;border-radius:14px;margin-top:12px;background:#000" hidden></video>
+    <label class="campo">Oppure incolla il link<input id="link-manuale" type="url" placeholder="https://…"></label>
+    <div class="azioni" style="grid-template-columns:1fr"><button class="btn" id="usa-link">Apri</button></div>
+    <p class="fonte" id="stato-lettore"></p>`);
+  altezza("alto");
+  const statoL = (t) => { $("#stato-lettore").textContent = t; };
+  let flusso = null;
+  const ferma = () => { if (flusso) flusso.getTracks().forEach((t) => t.stop()); flusso = null; };
+  $("#chiudi").addEventListener("click", () => { ferma(); perLuogo ? apriLuogo(perLuogo.osm) : (elenco(), altezza("basso")); });
+  $("#usa-link").addEventListener("click", () => { ferma(); letto($("#link-manuale").value.trim(), perLuogo); });
+  $("#leggi-nfc").addEventListener("click", async () => {
+    if (!("NDEFReader" in window)) return statoL("Questo telefono o browser non legge i tag NFC: usa il QR o incolla il link. Su Android funziona con Chrome.");
+    try {
+      const r = new NDEFReader(); await r.scan(); statoL("Avvicina il telefono al tag…");
+      r.onreading = (ev) => { for (const rec of ev.message.records) { if (rec.recordType === "url" || rec.recordType === "text") { letto(new TextDecoder().decode(rec.data), perLuogo); return; } } };
+    } catch { statoL("Lettura NFC non permessa: controlla i permessi del browser."); }
+  });
+  $("#leggi-qr").addEventListener("click", async () => {
+    if (!("BarcodeDetector" in window) || !navigator.mediaDevices) return statoL("Questo browser non legge i QR dalla fotocamera: usa la fotocamera del telefono e apri il link, oppure incollalo qui.");
+    try {
+      flusso = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      const v = $("#camera"); v.hidden = false; v.srcObject = flusso; await v.play(); statoL("Inquadra il codice QR…");
+      const det = new BarcodeDetector({ formats: ["qr_code"] });
+      const giro = async () => {
+        if (!flusso) return;
+        try { const c = await det.detect(v); if (c.length) { ferma(); return letto(c[0].rawValue, perLuogo); } } catch { /* riprova */ }
+        requestAnimationFrame(giro);
+      };
+      giro();
+    } catch { statoL("Fotocamera non disponibile o permesso negato."); }
+  });
+}
+function letto(testo, perLuogo) {
+  if (!testo) return avvisa("Nessun link letto");
+  const m = testo.match(/#luogo=([^&]+)/);
+  if (m) { const osm = decodeURIComponent(m[1]); if (TUTTI.find((l) => l.osm === osm)) { guadagna(2, "Tag aperto"); return apriLuogo(osm, true); } }
+  let url; try { url = new URL(testo); } catch { return avvisa("Il codice non contiene un link"); }
+  if (perLuogo) {
+    const c = leggi("collegamenti", []); c.push({ osm: perLuogo.osm, url: url.href, dominio: url.hostname.replace(/^www\./, "") }); scrivi("collegamenti", c);
+    guadagna(15, "Progetto collegato al luogo"); return apriLuogo(perLuogo.osm);
+  }
+  const noto = PROGETTI.flatMap((p) => p.luoghi.map((x) => ({ ...x, p }))).find((x) => url.href.startsWith(x.url));
+  if (noto) { const l = TUTTI.find((y) => y.comune === noto.p.comune && (y.nome || "").toLowerCase().includes(noto.parola)); if (l) return apriLuogo(l.osm, true); }
+  corpo(`<div class="testa"><div><h2>Link esterno</h2><p class="nota-tenue" style="margin:2px 0 0">${esc(url.hostname)}</p></div><button class="chiudi" id="chiudi" aria-label="Chiudi">${icona("chiudi")}</button></div>
+    <p>Questo codice porta fuori dall'app. Se appartiene a un luogo della mappa, aprilo e usa «Collega un QR o un tag» per salvarlo lì.</p>
+    <div class="azioni" style="grid-template-columns:1fr"><a class="btn primario" href="${esc(url.href)}" target="_blank" rel="noopener">Apri il link</a></div>`);
+  $("#chiudi").addEventListener("click", () => { elenco(); altezza("basso"); });
 }
 
 function infoUtili(l) {
@@ -348,9 +418,11 @@ async function sapereDi(l) {
   box.innerHTML = `<div class="riquadro"><h3>${icona("libro")} Da sapere</h3>
     ${voce || `<p>Nessuno ha ancora scritto la storia di questo posto.</p>`}
     ${proposte.map((p) => `<p style="margin-top:10px"><span class="etich demo">In verifica</span> ${esc(p.testo)}</p>`).join("")}
-    <div class="azioni" style="grid-template-columns:1fr"><button class="btn" id="proponi">${icona("modifica")} Aggiungi un'informazione</button></div>
-    <p class="fonte">Chi aggiunge un'informazione indica la fonte. Esce solo dopo la verifica di un esperto locale.</p></div>`;
+    <div class="azioni" style="grid-template-columns:1fr 1fr"><button class="btn" id="proponi">${icona("modifica")} Aggiungi un'informazione</button>
+      <button class="btn" id="collega">${icona("nfc")} Collega un QR o un tag</button></div>
+    <p class="fonte">Chi aggiunge un'informazione indica la fonte. Esce solo dopo la verifica di un esperto locale. Gli ambasciatori possono collegare qui i QR e i tag dei progetti culturali del paese, così non vanno persi.</p></div>`;
   $("#proponi").addEventListener("click", () => fai("proponi", l));
+  $("#collega").addEventListener("click", () => apriLettore(l));
 }
 
 /* ---- Bus: orari veri delle aziende ---- */
@@ -481,6 +553,8 @@ function gestisci(l) {
     <label class="campo">Titolo<input id="b-titolo" placeholder="Es. Menu del giorno, offerta, chiusura per ferie"></label>
     <label class="campo">Testo<textarea id="b-testo" rows="3"></textarea></label>
     <div class="azioni" style="grid-template-columns:1fr"><button class="btn accento pieno" id="pubblica">Pubblica</button></div>
+    <div class="riquadro"><h3>${icona("nfc")} Il tuo tag e il tuo QR</h3><p>Aprono questa scheda nell'app. Questo è il link da scrivere sul tag o nel QR:</p>
+      <p class="fonte" style="word-break:break-all">${esc(linkDi(l))}</p></div>
     <p class="sezione-t">Servizi per la tua attività</p>
     <div class="gruppo">${SERVIZI_EXTRA.map(([ic, ti, tx]) => `<div class="voce">${icona(ic)}<div><strong>${ti}</strong><small>${tx}</small></div><button class="btn piccolo" data-richiedi="${esc(ti)}">Richiedi</button></div>`).join("")}</div>
     ${DEMO}`);
@@ -835,9 +909,12 @@ function avvia() {
   $("#tasto-pos").addEventListener("click", posizione);
   $("#prenota-fab").addEventListener("click", pannelloPrenota);
   $("#luogo-sel").addEventListener("click", scegliComune);
+  $("#scan").addEventListener("click", () => apriLettore());
   $$("#barra button").forEach((b) => b.addEventListener("click", () => vai(b.dataset.vista)));
   document.addEventListener("click", (ev) => { const a = ev.target.closest("#corpo [data-apri]"); if (a) vai(a.dataset.apri); });
   const u = utente(); if (u?.comune) S.comune = u.comune;
   altezza("basso"); aggiorna(); contaAgenda();
   if (!u) benvenuto();
+  const daLink = () => { const m = location.hash.match(/luogo=([^&]+)/); if (m) { const osm = decodeURIComponent(m[1]); if (TUTTI.find((l) => l.osm === osm)) { azzera(); S.comune = null; aggiorna(); apriLuogo(osm, true); } } };
+  window.addEventListener("hashchange", daLink); daLink();
 }
