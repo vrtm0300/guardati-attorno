@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b4f6c">
+  <meta name="description" content="Guardati attorno: il Vallo di Diano su una mappa, per prenotare, comprare, scoprire e restare informati.">
+  <title>Guardati attorno</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%2213%22 fill=%22none%22 stroke=%22%230b4f6c%22 stroke-width=%225%22/%3E%3Ccircle cx=%2216%22 cy=%2216%22 r=%224%22 fill=%22%23ff6b35%22/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rethink+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin="">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div id="mappa" aria-label="Mappa"></div>
+
+  <header class="cima">
+    <div class="cerca">
+      <span data-icona="cerca"></span>
+      <input id="cerca" type="search" autocomplete="off" aria-label="Cerca un posto, un servizio, un paese">
+      <button class="luogo-sel" id="luogo-sel" aria-label="Scegli il paese"></button>
+    </div>
+    <div class="fila" id="categorie" role="group" aria-label="Categorie"></div>
+    <div class="fila sotto" id="sottocategorie" role="group" aria-label="Filtri" hidden></div>
+  </header>
+
+  <button class="tasto-pos" id="tasto-pos" aria-label="Mostra dove sono"><span data-icona="posizione"></span></button>
+  <button class="prenota-fab" id="prenota-fab"><span data-icona="calendario"></span>Prenota</button>
+
+  <section class="foglio" id="foglio" aria-live="polite">
+    <button class="maniglia" id="maniglia" aria-label="Allarga o riduci il pannello"></button>
+    <div class="corpo" id="corpo"></div>
+  </section>
+
+  <div class="pagina" id="pagina" hidden></div>
+
+  <nav class="barra" id="barra">
+    <button data-vista="mappa" class="attiva"><span data-icona="mappa"></span>Mappa</button>
+    <button data-vista="itinerari"><span data-icona="percorso"></span>Itinerari</button>
+    <button data-vista="bacheca"><span data-icona="bacheca"></span>Bacheca</button>
+    <button data-vista="agenda"><span data-icona="calendario"></span>Agenda<b class="conta" id="conta" hidden></b></button>
+    <button data-vista="profilo"><span data-icona="persona"></span>Profilo</button>
+  </nav>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" crossorigin=""></script>
+  <script src="icone.js"></script>
+  <script src="app.js"></script>
+  <script src="territori/vallo-di-diano.js"></script>
+  <script src="territori/vallo-di-diano-bus.js"></script>
+  <script src="territori/vallo-di-diano-bacheca.js"></script>
+  <script>avvia();</script>
+</body>
+</html>

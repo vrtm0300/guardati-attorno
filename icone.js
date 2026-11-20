@@ -1,0 +1,49 @@
+/* Icone a linea, minimali. Disegni ispirati a Lucide (licenza ISC). */
+const ICONE = {
+  cerca: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+  posizione: '<path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/>',
+  mappa: '<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z"/><path d="M9 4v14M15 6v14"/>',
+  percorso: '<circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H16a3.5 3.5 0 0 0 0-7H8a3.5 3.5 0 0 1 0-7h7.5"/>',
+  bacheca: '<path d="M4 5h16v11H8l-4 4Z"/><path d="M8 9h8M8 12h5"/>',
+  calendario: '<rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  persona: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
+  mangiare: '<path d="M7 3v8a2 2 0 0 0 2 2v8M5 3v5a2 2 0 0 0 2 2M9 3v5a2 2 0 0 1-2 2M17 21V3c-2 1.5-3 4-3 7v3h3"/>',
+  spesa: '<path d="M5 8h14l-1.2 12H6.2Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  sport: '<circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18M3 12h18M5.5 5.5c3 2.5 10 2.5 13 0M5.5 18.5c3-2.5 10-2.5 13 0"/>',
+  salute: '<path d="M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7Z"/>',
+  cura: '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.2 7.8 20 18M8.2 16.2 20 6"/>',
+  servizi: '<path d="M3 21h18M5 21V10M9 21V10M15 21V10M19 21V10M2 10l10-6 10 6Z"/>',
+  cultura: '<path d="M4 20V9l8-5 8 5v11"/><path d="M9 20v-6h6v6M2 20h20"/>',
+  natura: '<path d="M12 22v-6M7 16h10l-5-12Z"/><path d="M5 20 3 16h4M19 20l2-4h-4"/>',
+  dormire: '<path d="M3 18V7M3 13h18v5M21 18v-5a3 3 0 0 0-3-3h-7v3"/><circle cx="7" cy="10.5" r="1.8"/>',
+  muoversi: '<rect x="4" y="3" width="16" height="15" rx="3"/><path d="M4 11h16M8 21v-3M16 21v-3"/><circle cx="8" cy="14.5" r=".8"/><circle cx="16" cy="14.5" r=".8"/>',
+  telefono: '<path d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2"/>',
+  vai: '<path d="m3 11 18-8-8 18-2-8Z"/>',
+  cuore: '<path d="M12 20s-7-4.4-9-9a4.8 4.8 0 0 1 9-3 4.8 4.8 0 0 1 9 3c-2 4.6-9 9-9 9Z"/>',
+  orario: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  luogo: '<path d="M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12Z"/><circle cx="12" cy="9" r="2.5"/>',
+  sito: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 3 2.5 15 0 18M12 3c-2.5 3-2.5 15 0 18"/>',
+  chiudi: '<path d="M6 6l12 12M18 6 6 18"/>',
+  piu: '<path d="M12 5v14M5 12h14"/>',
+  spunta: '<path d="m5 12 5 5 9-10"/>',
+  sveglia: '<circle cx="12" cy="13" r="7"/><path d="M12 10v3l2 2M5 4 2 7M19 4l3 3"/>',
+  nfc: '<path d="M6 8.3a6 6 0 0 1 0 7.4M9.5 6a9 9 0 0 1 0 12M13 4a12 12 0 0 1 0 16M16.5 2a15 15 0 0 1 0 20"/>',
+  negozio: '<path d="M4 10v10h16V10M3 6l2-3h14l2 3v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0Z"/><path d="M10 20v-5h4v5"/>',
+  dono: '<rect x="3" y="8" width="18" height="5" rx="1"/><path d="M5 13v8h14v-8M12 8v13M12 8c-2-4-6-4-6-1.5S10 8 12 8c2 0 6-1 6-1.5S14 4 12 8"/>',
+  moneta: '<circle cx="12" cy="12" r="9"/><path d="M15 9.5a3 3 0 0 0-3-1.5c-2 0-3 1-3 2.2 0 3 6 1.6 6 4.6 0 1.2-1.2 2.2-3 2.2a3.4 3.4 0 0 1-3-1.6M12 6.5v1.5M12 16v1.5"/>',
+  libro: '<path d="M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4ZM20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6Z"/>',
+  modifica: '<path d="M4 20h4L19 9l-4-4L4 16ZM13.5 6.5l4 4"/>',
+  freccia: '<path d="m9 6 6 6-6 6"/>',
+  giu: '<path d="m6 9 6 6 6-6"/>',
+  su: '<path d="m6 15 6-6 6 6"/>',
+  stella: '<path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9Z"/>',
+  testo: '<path d="M4 7V5h10v2M9 5v14M7 19h4M14 12v-1.5h7V12M17.5 10.5V19M16 19h3"/>',
+  attivita: '<path d="M3 9 5 4h14l2 5M4 9v11h16V9M9 20v-6h6v6"/>',
+  uscita: '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>',
+};
+function icona(nome, cls = "i") {
+  return `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONE[nome] || ""}</svg>`;
+}
+function riempiIcone(radice = document) {
+  radice.querySelectorAll("[data-icona]").forEach((el) => { el.outerHTML = icona(el.dataset.icona); });
+}
