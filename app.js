@@ -16,6 +16,8 @@ const e = (...f) => (l) => f.every((g) => g(l));
 const non = (f) => (l) => !f(l);
 
 const MARCA = "#1d4e6b";
+/* Un colore per ogni area: si riconoscono le cose sulla mappa anche senza filtrare. Toni presi dal territorio, tutti leggibili con l'icona bianca. */
+const COLORI_AREE = {"mangiare": "#d0622a", "spesa": "#2e7d4f", "negozi": "#7a5ba6", "cura": "#c2417f", "sport": "#2a6fb0", "salute": "#d62f3a", "auto": "#5f6b7a", "servizi": "#1d4e6b", "cultura": "#a0711c", "natura": "#5a9a2a", "dormire": "#0f7b8a", "muoversi": "#3f51a3"};
 /* Ogni categoria: nome che dice cosa contiene, icona a linea, sottofiltri che guidano,
    "info" = che cosa serve per decidere (lo pubblica l'attività), "prezzo" = si può ordinare dal più economico. */
 const CATEGORIE = [
@@ -103,7 +105,7 @@ const CATEGORIE = [
   { id: "muoversi", nome: "Muoversi", icona: "muoversi", azione: "bus",
     entra: t("highway=bus_stop", "amenity=bus_station", "railway=station"),
     sotto: [["Fermate", t("highway=bus_stop")], ["Autostazioni", t("amenity=bus_station")], ["Stazioni", t("railway=station")]] },
-].map((c) => ({ ...c, colore: MARCA }));
+].map((c) => ({ ...c, colore: COLORI_AREE[c.id] || MARCA }));
 
 const NOMI = {
   "amenity=restaurant": "Ristorante", "amenity=cafe": "Caffè", "amenity=bar": "Bar", "amenity=pub": "Pub", "amenity=fast_food": "Rosticceria",
@@ -1004,7 +1006,7 @@ function avvisa(html) {
 function disegnaCategorie() {
   const preferite = new Set((utente()?.gusti || []).flatMap((g) => GUSTI[g] || []));
   const ordinate = [...CATEGORIE].sort((a, b) => preferite.has(b.id) - preferite.has(a.id));
-  $("#categorie").innerHTML = ordinate.map((c) => `<button class="chip" data-cat="${c.id}" aria-pressed="${S.cat === c.id}">${icona(c.icona)}${c.nome}</button>`).join("");
+  $("#categorie").innerHTML = ordinate.map((c) => `<button class="chip" data-cat="${c.id}" aria-pressed="${S.cat === c.id}" style="--area:${c.colore}">${icona(c.icona)}${c.nome}</button>`).join("");
   $$("[data-cat]").forEach((b) => b.addEventListener("click", () => {
     S.cat = S.cat === b.dataset.cat ? null : b.dataset.cat; S.sotto = null; S.testo = ""; $("#cerca").value = ""; aggiorna(); altezza("medio");
   }));

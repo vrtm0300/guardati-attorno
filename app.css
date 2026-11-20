@@ -215,3 +215,8 @@ svg.i { width: 1.25em; height: 1.25em; flex: none; stroke: currentColor; fill: n
 
 /* Maniglia più facile da prendere con il dito */
 .maniglia { padding: 12px 0 10px; touch-action: none; cursor: grab; }
+
+/* Colore delle aree nei filtri */
+#categorie .chip svg.i { color: var(--area, var(--mare)); }
+#categorie .chip[aria-pressed="true"] { background: var(--area, var(--inchiostro)); border-color: var(--area, var(--inchiostro)); }
+#categorie .chip[aria-pressed="true"] svg.i { color: #fff; }
