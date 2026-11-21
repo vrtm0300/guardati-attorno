@@ -288,6 +288,36 @@ const AZIONI = {
   visita: ["Aggiungi all'itinerario", "percorso"], vai: ["Portami lì", "vai"], bus: ["Orari dei bus", "muoversi"],
 };
 
+/* Orari di OpenStreetMap: capisce le forme più comuni («Mo-Sa 08:30-13:00,16:30-20:00; Su off», «24/7»).
+   Se non le capisce, non dice nulla: meglio niente che un'informazione sbagliata. */
+const GIORNI = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const GIORNI_IT = { Mo: "lun", Tu: "mar", We: "mer", Th: "gio", Fr: "ven", Sa: "sab", Su: "dom", PH: "festivi", off: "chiuso" };
+function apertoOra(orari, d = new Date()) {
+  if (!orari) return null;
+  if (orari.trim() === "24/7") return true;
+  const oggi = GIORNI[d.getDay()], min = d.getHours() * 60 + d.getMinutes();
+  let esito = null;
+  for (const parte of orari.split(";").map((x) => x.trim()).filter(Boolean)) {
+    const m = parte.match(/^((?:Mo|Tu|We|Th|Fr|Sa|Su)(?:-(?:Mo|Tu|We|Th|Fr|Sa|Su))?(?:,(?:Mo|Tu|We|Th|Fr|Sa|Su)(?:-(?:Mo|Tu|We|Th|Fr|Sa|Su))?)*)\s+(.+)$/);
+    if (!m) { if (/^\d{1,2}:\d{2}-/.test(parte)) { esito = dentroFasce(parte, min); continue; } return null; }
+    const giorni = m[1].split(",").flatMap((g) => { const [a, b] = g.split("-"); if (!b) return [a]; const ia = GIORNI.indexOf(a), ib = GIORNI.indexOf(b); const out = []; for (let k = ia; ; k = (k + 1) % 7) { out.push(GIORNI[k]); if (k === ib) break; } return out; });
+    if (!giorni.includes(oggi)) continue;
+    if (m[2].trim() === "off" || m[2].trim() === "closed") { esito = false; continue; }
+    const r = dentroFasce(m[2], min); if (r === null) return null; esito = r;
+  }
+  return esito === null ? false : esito;
+}
+function dentroFasce(testo, min) {
+  let ok = false;
+  for (const f of testo.split(",")) {
+    const m = f.trim().match(/^(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})$/); if (!m) return null;
+    const a = +m[1] * 60 + +m[2], b = +m[3] * 60 + +m[4];
+    if (b > a ? min >= a && min < b : min >= a || min < b) ok = true;
+  }
+  return ok;
+}
+const orariItaliano = (o) => o.replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su|PH|off)\b/g, (g) => GIORNI_IT[g]).replace(/;\s*/g, " · ");
+
 async function apriLuogo(osm, centra = false) {
   const l = TUTTI.find((x) => x.osm === osm); if (!l) return;
   const prima = S.scelto; S.scelto = osm;
@@ -309,12 +339,12 @@ async function apriLuogo(osm, centra = false) {
     <div class="testa">
       <div><span class="etich" style="color:${l.cat.colore}">${esc(tipoDi(l))}</span>
         <h2 style="margin-top:6px">${esc(nomeDi(l))}</h2>
-        <p class="nota-tenue" style="margin:2px 0 0">${esc(comuneDi(l.comune)?.nome || "")} · ${distanza(l)}${rivendicata ? ' · <span class="etich ok">Gestita dal titolare</span>' : ""}</p></div>
+        <p class="nota-tenue" style="margin:2px 0 0">${esc(comuneDi(l.comune)?.nome || "")} · ${distanza(l)}${statoApertura(l)}${rivendicata ? ' · <span class="etich ok">Gestita dal titolare</span>' : ""}</p></div>
       <button class="chiudi" id="chiudi" aria-label="Chiudi">${icona("chiudi")}</button>
     </div>
     <ul class="dati">
       ${l.indirizzo ? `<li>${icona("luogo")}<span>${esc(l.indirizzo)}</span></li>` : ""}
-      ${l.orari ? `<li>${icona("orario")}<span>${esc(l.orari)}</span></li>` : ""}
+      ${l.orari ? `<li>${icona("orario")}<span>${esc(orariItaliano(l.orari))}</span></li>` : ""}
       ${l.telefono ? `<li>${icona("telefono")}<span>${esc(l.telefono)}</span></li>` : ""}
       ${l.sito ? `<li>${icona("sito")}<a href="${esc(l.sito)}" target="_blank" rel="noopener">${esc(l.sito.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a></li>` : ""}
     </ul>
@@ -331,8 +361,8 @@ async function apriLuogo(osm, centra = false) {
       <div class="azioni" style="grid-template-columns:1fr"><a class="btn" href="${esc(x.url)}" target="_blank" rel="noopener">Apri la pagina del progetto</a></div></div>`).join("")}
     <div id="sapere"></div>
     ${l.cat.id !== "cultura" && l.cat.id !== "natura" && l.cat.id !== "muoversi" && !rivendicata ? `
-      <div class="riquadro"><h3>È la tua attività?</h3><p>Riscattala gratis: pubblichi menù, listino e orari, ricevi prenotazioni e offerte in Bacheca.</p>
-        <div class="azioni" style="grid-template-columns:1fr"><button class="btn" data-fai="rivendica">${icona("nfc")} Riscatta gratis la scheda</button></div></div>` : ""}
+      <details class="altro"><summary>È la tua attività?</summary><div class="riquadro" style="margin-top:8px"><p>Riscattala gratis: pubblichi menù, listino e orari, ricevi prenotazioni e offerte in Bacheca.</p>
+        <div class="azioni" style="grid-template-columns:1fr"><button class="btn" data-fai="rivendica">${icona("nfc")} Riscatta gratis la scheda</button></div></div></details>` : ""}
     <p class="fonte">Dati: <a href="https://www.openstreetmap.org/${esc(l.osm)}" target="_blank" rel="noopener">OpenStreetMap</a>${l.foto ? ' · foto: <a href="' + esc(l.foto_fonte || l.foto.replace("Special:FilePath/", "File:").replace(/\?width=\d+$/, "")) + '" target="_blank" rel="noopener">' + (l.foto_fonte ? "Wikipedia" : "Wikimedia Commons") + '</a>' : ""}</p>`);
   $("#chiudi").addEventListener("click", () => { elenco(); disegnaPin(); altezza("basso"); });
   $$("[data-fai]", $("#corpo")).forEach((b) => b.addEventListener("click", () => fai(b.dataset.fai, l)));
@@ -410,6 +440,10 @@ function letto(testo, perLuogo) {
   $("#chiudi").addEventListener("click", () => { elenco(); altezza("basso"); });
 }
 
+function statoApertura(l) {
+  const a = apertoOra(l.orari);
+  return a === null ? "" : a ? ' · <b style="color:var(--azione)">Aperto ora</b>' : ' · <b style="color:var(--rosso)">Chiuso ora</b>';
+}
 function vetrinaDi(l) {
   const v = prodottiDi(l); if (!v) return "";
   return `<div class="riquadro"><h3>${icona("negozio")} In vetrina</h3>
@@ -459,8 +493,13 @@ async function sapereDi(l) {
 function busDi(l) {
   const box = $("#sapere"); if (!box) return;
   const linee = LINEE.filter((x) => x.fermate.some((f) => f.comune === l.comune));
-  box.innerHTML = linee.length ? `<div class="riquadro"><h3>${icona("muoversi")} Bus da ${esc(comuneDi(l.comune).nome)}</h3>
-    ${linee.map((x) => `<p><strong>${esc(x.azienda)}</strong> · ${esc(x.titolo)}</p>`).join("")}
+  const ora = new Date(), min = ora.getHours() * 60 + ora.getMinutes(), g = ora.getDay();
+  const valeOggi = (col) => /Domenica/.test(col) ? g === 0 : /Lun–Ven/.test(col) ? g >= 1 && g <= 5 : /Lun–Sab/.test(col) ? g >= 1 && g <= 6 : true;
+  const partenze = linee.flatMap((x) => x.fermate.filter((f) => f.comune === l.comune).flatMap((f) => f.orari.map((o, k) => ({ o, col: x.colonne[k], az: x.azienda, f: f.nome }))))
+    .filter((p) => p.o && valeOggi(p.col)).map((p) => { const [h, m] = p.o.replace(/[()*]/g, "").split(":"); return { ...p, min: +h * 60 + +m }; })
+    .filter((p) => p.min >= min).sort((a, b) => a.min - b.min).slice(0, 4);
+  box.innerHTML = linee.length ? `<div class="riquadro"><h3>${icona("muoversi")} Prossime partenze da ${esc(comuneDi(l.comune).nome)}</h3>
+    ${partenze.length ? partenze.map((p) => `<div class="voce" style="padding:7px 0"><b style="font-size:1.1rem;min-width:3.2rem">${esc(p.o.replace(/[()*]/g, ""))}</b><div><strong style="font-weight:500">${esc(p.az)}</strong><small>${esc(p.f)}</small></div></div>`).join("") : `<p class="nota-tenue">Per oggi non ci sono altre partenze.</p>`}
     <div class="azioni" style="grid-template-columns:1fr"><button class="btn" data-apri="bus">Vedi gli orari</button></div></div>` : "";
 }
 
