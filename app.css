@@ -246,3 +246,26 @@ details.altro { margin-top: 14px; border-top: 1px solid var(--linea); padding-to
 details.altro summary { cursor: pointer; color: var(--tenue); font-weight: 600; font-size: .92rem; list-style: none; }
 details.altro summary::after { content: " ›"; }
 details.altro[open] summary::after { content: " ⌄"; }
+
+/* ===== Bottoni «Morbidi»: la forma dice che cosa fa il bottone =====
+   azioni: angoli di 14 px; scelte e filtri: pillola; icone: quadrato di 48 px; minimo 48 px da toccare. */
+.btn { min-height: 3rem; border-radius: 14px; }
+.btn.piccolo { min-height: 2.75rem; border-radius: 12px; }
+.btn.verticale { flex-direction: row; gap: 6px; font-size: .88rem; min-height: 3rem; padding: 0 8px; }
+.btn.verticale svg { width: 1.1em; height: 1.1em; }
+.chiudi, .scan, .tondo { width: 3rem; height: 3rem; border-radius: 14px; }
+.tondo { border-radius: 14px; }
+.scelta { min-height: 2.75rem; border-radius: 99px; padding: .55rem 1rem; }
+.scelte .scelta small { display: inline; margin-right: 4px; }
+.giorni .scelta, .scelte .scelta[data-g] { border-radius: 14px; }
+.azioni a.btn, .azioni button.btn { text-align: center; }
+/* Profilo: modalità e strumenti del ruolo */
+.modo { display: block; margin-top: 16px; border: 1px solid var(--linea); border-radius: 14px; padding: 10px 14px; }
+.modo small { display: block; color: var(--tenue); font-size: .8rem; }
+.modo select { width: 100%; border: 0; background: none; font-weight: 700; font-size: 1.05rem; color: var(--inchiostro); padding: 2px 0; }
+.attrezzi { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.btn.attrezzo { flex-direction: column; align-items: flex-start; justify-content: flex-start; text-align: left; gap: 6px; padding: 12px; min-height: 5rem; background: var(--superficie); border-color: var(--superficie); font-weight: 600; }
+.btn.attrezzo svg { color: var(--mare); }
+
+/* Il bottone principale di ogni schermata è verde, come da regola */
+.btn.primario { background: var(--azione); border-color: var(--azione); }

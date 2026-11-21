@@ -350,7 +350,7 @@ async function apriLuogo(osm, centra = false) {
     </ul>
     <div class="azioni">
       ${primaria}
-      <button class="btn verticale ${preferito ? "attivo" : ""}" data-fai="solito">${icona("cuore")}${preferito ? "Tra i soliti" : "Tra i miei soliti"}</button>
+      <button class="btn verticale ${preferito ? "attivo" : ""}" data-fai="solito">${icona("cuore")}${preferito ? "Nei soliti" : "Soliti"}</button>
       <a class="btn verticale" href="${vai}" target="_blank" rel="noopener">${icona("vai")}Portami lì</a>
       ${tel ? `<a class="btn verticale" href="${tel}">${icona("telefono")}Chiama</a>` : l.cat.azione === "visita" ? "" : `<button class="btn verticale" data-fai="visita">${icona("percorso")}Itinerario</button>`}
       ${COSE_PER_CAT[l.cat.id] ? `<button class="btn" style="grid-column:1/-1" data-organizza="${esc(l.osm)}">${icona("persone")} Organizza un incontro qui</button>` : ""}
@@ -942,33 +942,38 @@ const MASCOTTE = `<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy
 
 function paginaProfilo() {
   const u = utente() || {}, scelti = miei();
+  const ruoli = (u.ruoli || ["vivo"]).filter((k) => RUOLI[k]);
+  let attivo = leggi("ruolo-attivo", null); if (!ruoli.includes(attivo)) attivo = ruoli.find((k) => RUOLI[k].strumenti.length) || ruoli[0];
+  const strumenti = RUOLI[attivo]?.strumenti || [];
   pagina(`
     <div class="profilo-testa"><span class="avatar">${MASCOTTE}</span>
-      <div style="flex:1"><h1 style="margin:0">${esc(u.nome || "Ospite")}</h1><p class="nota-tenue" style="margin:0">${esc(comuneDi(u.comune)?.nome || "Di passaggio")}${u.eta ? " · " + esc(u.eta) : ""}</p></div>
-      <button class="btn piccolo" data-apri="dati">${icona("modifica")} Modifica</button></div>
+      <div style="flex:1"><h1 style="margin:0">${esc(u.nome || "Ospite")}</h1><p class="nota-tenue" style="margin:0">${esc(comuneDi(u.comune)?.nome || "Di passaggio")}</p></div>
+      <button class="chiudi" data-apri="impostazioni" aria-label="Impostazioni">${icona("ingranaggio")}</button></div>
 
-    ${strumentiRuolo(u)}
+    ${ruoli.length > 1 || strumenti.length ? `<label class="modo">
+      <small>Adesso uso l'app come</small>
+      <select id="ruolo-attivo">${ruoli.map((k) => `<option value="${k}" ${k === attivo ? "selected" : ""}>${RUOLI[k].nome}</option>`).join("")}</select></label>
+    ${strumenti.length ? `<div class="attrezzi">${strumenti.map(([ic, testo, dove]) => `<button class="btn attrezzo" data-apri="${dove}">${icona(ic)}<span>${testo}</span></button>`).join("")}</div>` : ""}` : ""}
+
     <div class="testa-sezione"><p class="sezione-t">Le mie cose</p><button class="btn piccolo" id="aggiungi-modulo">${icona("piu")} Aggiungi</button></div>
     ${scelti.length ? `<div class="gruppo">${scelti.filter((k) => MODULI[k]).map((k) => `<button class="voce voce-btn" data-modulo="${k}">${icona(MODULI[k].icona)}<div><strong>${MODULI[k].nome}</strong><small>${esc(MODULI[k].desc())}</small></div>${icona("freccia")}</button>`).join("")}</div>`
-      : `<p class="nota-tenue">Aggiungi qui le funzioni che usi di più.</p>`}
-
-    <p class="sezione-t">Impostazioni</p>
-    <div class="gruppo">
-      <label class="voce">${icona("testo")}<div><strong>Testo grande</strong></div><input type="checkbox" id="grande" ${document.documentElement.classList.contains("grande") ? "checked" : ""}></label>
-      <button class="voce voce-btn" data-apri="dati">${icona("persona")}<div><strong>I miei dati e i miei gusti</strong><small>${esc((u.gusti || []).slice(0, 3).join(", ") || "Aggiungi i tuoi gusti per ricerche su misura")}</small></div>${icona("freccia")}</button>
-      <button class="voce voce-btn" data-apri="preferenze">${icona("bacheca")}<div><strong>Cosa vedere in Bacheca</strong></div>${icona("freccia")}</button>
+      : `<p class="nota-tenue">Aggiungi qui le funzioni che usi di più.</p>`}`);
+  $$("[data-modulo]").forEach((b) => b.addEventListener("click", () => MODULI[b.dataset.modulo].apri()));
+  $("#aggiungi-modulo").addEventListener("click", catalogoModuli);
+  $("#ruolo-attivo")?.addEventListener("change", (ev) => { scrivi("ruolo-attivo", ev.target.value); paginaProfilo(); });
+}
+function paginaImpostazioni() {
+  const u = utente() || {};
+  pagina(`<h1>Impostazioni</h1>
+    <div class="gruppo" style="margin-top:12px">
+      <label class="voce">${icona("testo")}<div><strong>Testo grande</strong><small>Lettere e pulsanti più grandi</small></div><input type="checkbox" id="grande" ${document.documentElement.classList.contains("grande") ? "checked" : ""}></label>
+      <button class="voce voce-btn" data-apri="dati">${icona("persona")}<div><strong>I miei dati, i miei ruoli e i miei gusti</strong><small>${esc((u.ruoli || []).map((k) => RUOLI[k]?.nome).filter(Boolean).join(", "))}</small></div>${icona("freccia")}</button>
+      <button class="voce voce-btn" data-apri="preferenze">${icona("succede")}<div><strong>Cosa vedere in Succede</strong></div>${icona("freccia")}</button>
     </div>
     <div class="azioni" style="grid-template-columns:1fr;margin-top:18px"><button class="btn" id="esci">${icona("uscita")} Ricomincia da capo</button></div>
     <p class="fonte">I tuoi dati restano su questo telefono. Mappa e luoghi © OpenStreetMap, scaricati il ${esc(T.scaricati)}.</p>`);
-  $$("[data-modulo]").forEach((b) => b.addEventListener("click", () => MODULI[b.dataset.modulo].apri()));
-  $("#aggiungi-modulo").addEventListener("click", catalogoModuli);
   $("#grande").addEventListener("change", (ev) => { document.documentElement.classList.toggle("grande", ev.target.checked); scrivi("grande", ev.target.checked); setTimeout(() => mappa.invalidateSize(), 50); });
   $("#esci").addEventListener("click", () => { Object.keys(localStorage).filter((k) => k.startsWith(MEM)).forEach((k) => localStorage.removeItem(k)); location.reload(); });
-}
-function strumentiRuolo(u) {
-  const st = (u.ruoli || []).flatMap((k) => (RUOLI[k]?.strumenti || []).map((x) => [...x, RUOLI[k].nome]));
-  if (!st.length) return "";
-  return `<p class="sezione-t">Per te</p><div class="gruppo">${st.map(([ic, testo, dove, ruolo]) => `<button class="voce voce-btn" data-apri="${dove}">${icona(ic)}<div><strong>${testo}</strong><small>${esc(ruolo)}</small></div>${icona("freccia")}</button>`).join("")}</div>`;
 }
 function catalogoModuli() {
   const scelti = miei();
@@ -1057,7 +1062,7 @@ function collegaDati(r, u, fatto) {
 }
 function paginaDati() {
   const u = utente() || {};
-  pagina(`<h1>I miei dati</h1><p class="nota-tenue">Servono a mostrarti prima ciò che ti interessa. Restano sul tuo telefono.</p>
+  pagina(`<h1>I miei dati</h1><p class="nota-tenue">Chi sei, come usi l'app e che cosa ti piace: servono a mostrarti prima ciò che ti interessa. Restano sul tuo telefono.</p>
     ${moduloDati(u, "Salva")}
     <p class="sezione-t">Promemoria</p>
     <div class="gruppo"><div class="voce">${icona("sveglia")}<div><strong>Come ti ricordiamo le prenotazioni</strong></div>
@@ -1116,10 +1121,10 @@ function scegliComune() {
 
 function vai(v, arg) {
   S.vista = v;
-  const tab = { bus: "profilo", preferenze: "bacheca", registra: "profilo", dati: "profilo", punti: "profilo", moduli: "profilo", incontri: "bacheca", proponi: "bacheca", eventi: "bacheca", avvisi: "bacheca", ambasciatore: "profilo", consegne: "profilo" }[v] || v;
+  const tab = { bus: "profilo", preferenze: "bacheca", registra: "profilo", dati: "profilo", punti: "profilo", moduli: "profilo", incontri: "bacheca", proponi: "bacheca", eventi: "bacheca", avvisi: "bacheca", ambasciatore: "profilo", consegne: "profilo", impostazioni: "profilo" }[v] || v;
   $$("#barra button").forEach((b) => b.classList.toggle("attiva", b.dataset.vista === tab));
   if (v === "mappa") { $("#pagina").hidden = true; setTimeout(() => mappa.invalidateSize(), 20); return; }
-  ({ itinerari: paginaItinerari, bacheca: paginaBacheca, agenda: paginaAgenda, profilo: paginaProfilo, bus: paginaBus, preferenze: paginaPreferenze, registra: paginaRegistra, dati: paginaDati, punti: paginaPunti, moduli: catalogoModuli, incontri: paginaIncontri, proponi: paginaProponi, eventi: paginaEventi, avvisi: paginaBacheca, ambasciatore: paginaAmbasciatore, consegne: paginaConsegne })[v](arg);
+  ({ itinerari: paginaItinerari, bacheca: paginaBacheca, agenda: paginaAgenda, profilo: paginaProfilo, bus: paginaBus, preferenze: paginaPreferenze, registra: paginaRegistra, dati: paginaDati, punti: paginaPunti, moduli: catalogoModuli, incontri: paginaIncontri, proponi: paginaProponi, eventi: paginaEventi, avvisi: paginaBacheca, ambasciatore: paginaAmbasciatore, consegne: paginaConsegne, impostazioni: paginaImpostazioni })[v](arg);
 }
 
 /* ================= Benvenuto e registrazione ================= */
